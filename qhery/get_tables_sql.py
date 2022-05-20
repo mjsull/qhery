@@ -45,9 +45,10 @@ class covid_drdb:
     def get_epitopes(self):
         self.epitopes = {}
         for i in self.drug_list:
-            self.epitopes[i] = []
+            self.epitopes[i] = set()
             for row in self.con.execute('SELECT position FROM antibody_epitopes WHERE ab_name = "{}"'.format(i)):
-                self.epitopes[i].append(row[0])
+                for j in row[0].split("+"):
+                    self.epitopes[i].add(int(j))
 
 
     def get_fold_resistance(self):
