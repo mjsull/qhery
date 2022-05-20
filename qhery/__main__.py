@@ -83,7 +83,8 @@ elif args.subparser_name == "run":
     gt.download_latest()
     gt.connect()
     gt.get_epitopes()
-    make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
+    if not args.bam is None:
+        make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
     gt.get_synonyms()
     gt.get_single_mutations()
     gt.get_fold_resistance()
@@ -96,11 +97,12 @@ elif args.subparser_name == "run":
     if not args.bam is None:
         uncovered = make_output.get_coverage_genes(args.bam, args.pipeline_dir, args.sample_name)
         mut_list_lofreq = mf.recover_low_freq(args.bam)
+    else:
+        mut_list_lofreq = []
     mut_list_sample = list(set(mut_list_lofreq + mut_list_sample))
     make_output.make_final_tables(mut_list_sample, gt.resistances, mut_list_var, gt.epitopes, uncovered, args.pipeline_dir, args.sample_name)
-    make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)
-    make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
-
+    if not args.fasta is None:
+        make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)
 
 
 
