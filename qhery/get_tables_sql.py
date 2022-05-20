@@ -29,6 +29,9 @@ class covid_drdb:
             if i.startswith("covid-drdb-") and i.endswith(".db"):
                 db_list.append(i)
         db_list.sort()
+        if db_list == []:
+            sys.stderr.write("No databases found in database directory.")
+            sys.exit(0)
         self.database = os.path.join(self.database_folder, db_list[-1])
 
     def connect(self):

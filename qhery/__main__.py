@@ -35,8 +35,8 @@ mut_parser.add_argument("--vcf", "-v", help="List of VCF files")
 mut_parser.add_argument("--database_dir", "-d", help="Directory with latest Stanford resistance database.")
 mut_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
 mut_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-mut_parser.add_argument("--keep_lineage", "-k", help="Report lineage mutations as well.")
 mut_parser.add_argument("--sample_name", "-n", help="Sample name.")
+mut_parser.add_argument("--bam", "-b", help="bam file")
 
 
 args = parser.parse_args()
@@ -60,15 +60,21 @@ elif args.subparser_name == "mutations":
     mf.convert_vcf()
     mf.run_bcf_csq()
     mut_list_sample = mf.parse_csq()
-    all_muts = list(set(mut_list_var + mut_list_sample))
+    if not args.bam is None:
+        mut_list_lofreq = mf.recover_low_freq(args.bam)
+    else:
+        mut_list_lofreq = []
+    all_muts = list(set(mut_list_sample + mut_list_lofreq))
     all_muts.sort(key=lambda x: (x.split(':')[0].split('-')[0],  int(''.join([n for n in x if n.isdigit()]))))
     with open(os.path.join(args.pipeline_dir, "{}.mutations.txt".format(args.sample_name)), "w") as o:
         for i in all_muts:
-            if not i in mut_list_var or not i in mut_list_sample:
+            if "_" in i:
+                mut = i.split("_")[0][:-1] + "ins"
+            else:
+                mut = i
+            if not mut in mut_list_var:
                 o.write("{}\n".format(i))
 
-#    print(set(mut_list_var) - set(mut_list_sample))
-#    print(set(mut_list_sample) - set(mut_list_var))
     
 
 elif args.subparser_name == "run":

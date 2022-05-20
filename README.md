@@ -64,7 +64,7 @@ Determines the amino acid changes caused by the mutations listed in sample.vcf a
 Determines the amino acid changes caused by the mutations listed in sample.vcf. Additionally will use lofreq to find minor alleles in the BAM file. Finally they are  compared to a list of mutations that cause a reduction in Sotrovimab binding or reduction in Remdesivir efficiency.
  
 
-`qhery list_rx`
+`qhery list_rx --database_dir database_dir`
 
 List treatments for which resistance information exists.
 
