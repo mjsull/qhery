@@ -183,6 +183,6 @@ report lineage defining mutations as well
 
 ## Method
 
-A flowchart of how qhery run works
+A flowchart of how ``qhery run`` works
 
 ![flowchart](https://github.com/mjsull/qhery/blob/master/paper/flowchart.svg?raw=true)
