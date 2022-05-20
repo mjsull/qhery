@@ -1,13 +1,32 @@
 # qhery
 
-## 
 ![release](https://img.shields.io/github/v/release/mjsull/qhery) ![license](https://img.shields.io/badge/license-GPLv3-green)
+___
+
+
+## Table of contents
+
+  * [Installation](#installation)
+    + [git](#git)
+  * [requirements](#requirements-)
+    + [Optional requirements](#optional-requirements-)
+  * [Example usage](#example-usage-)
+  * [Output](#output)
+    + [Example output](#example-output-)
+    + [Columns](#columns)
+  * [TODO](#todo)
+  * [Arguments](#arguments-)
+    + [subcommands](#subcommands)
+      - [list_rx](#list-rx)
+      - [run](#run)
+      - [mutations](#mutations)
+  * [Method](#method)
 
 
 
-### Installation 
+## Installation 
 
-#### git
+### git
 
 While in development qhery can only be installed by downloading from git
 
@@ -17,20 +36,20 @@ git clone https://github.com/mjsull/qhery.git
 
 
 
-#### requirements:
+## requirements:
 
 - **Python >= 3.9.12**
 - **bcftools >= 1.10.2**
 - **curl >= 7.83.1**
 - **wget >= 1.20.3**
 
-##### Optional requirements:
+### Optional requirements:
 - **ncbi-blast+ >= 2.9.0+** - This will generate a BLASTx alignment of the genome for visualization
 - **lofreq >= 2.1.5** - if provided with a BAM file **qhery** will look for minor alleles in the alignment with lofreq
 - **samtools >= 1.7** - samtools is used to determine the depth of sequence along the genome, and which resistance mutations
 cannot be reported on due to lack of coverage.
 
-### Example usage: 
+## Example usage: 
 
 `qhery run --database_dir database_dir --vcf sample.vcf --pipeline_dir output_dir --lineage Omicron/BA.1 --sample_name mysample --rx_list Sotrovimab`
 
@@ -45,6 +64,25 @@ Determines the amino acid changes caused by the mutations listed in sample.vcf. 
 
 List treatments for which resistance information exists.
 
+## Output
+
+**qhery** produces two tables.
+
+``<sample_name>.full.tsv``
+
+Contains all mutations detected in the sample and all mutations associated with the treatments listed by the user.
+
+``<sample_name>.final.tsv``
+
+Both tables have the same format (described below in example output).
+
+Contains all mutations detected in the sample that are both in genes assosciated with reistance to the treatments listed
+and are not lineage defining mutations.
+It also contains resistance mutation that do not have enough read depth to be called as present or absent (default 20x read depth).
+
+Finally qhery will also produce a BLASTx alignment of the query to mature proteins and a [bammix](https://github.com/chrisruis/bammix/tree/main/bammix)
+plot of the epitopes of the treatments the user listed (if available).
+
 
 ### Example output:
 
@@ -55,7 +93,7 @@ List treatments for which resistance information exists.
 | N:ERS31-33∆ | -           | True      | True       | False    | False               | 0                                 | -                          | False                 | 0                                 | -                          | False                 |
 | ORF3a:L52F  | -           | True      | False      | True     | False               | 0                                 | -                          | False                 | 0                                 | -                          | False                 |
 | RdRP:802D   | -           | False     | False      | True     | True                | 2.54                              | =2.54                      | False                 | 0                                 | -                          | False                 |
-|S:R214ins    | S:R214R_EPE | True      | True       | True     | True                | 0                                 | -                          | False                 | 3.00                              | =3.0                       | False
+|S:R214ins    | S:R214R_EPE | True      | True       | True     | True                | 0                                 | -                          | False                 | 3.00                              | =3.0                       | False                 |
 | S:P337T     | -           | True      | False      | True     | True                | 0                                 | -                          | False                 | 8.00                              | =5.4,=10.6                 | True                  |
 
 ### Columns
@@ -142,8 +180,10 @@ Fasta file of the consensus sequence of the sample, only used to generate a BLAS
 
 <hr style="border:1px solid gray">
 
-#### mutations
+### mutations
 ___
+
+#### arguments
 
 Only list mutations and not resistance information.
 
@@ -186,3 +226,4 @@ report lineage defining mutations as well
 A flowchart of how ``qhery run`` works
 
 ![flowchart](https://github.com/mjsull/qhery/blob/master/paper/flowchart.svg?raw=true)
+````
