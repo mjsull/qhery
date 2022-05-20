@@ -98,6 +98,7 @@ elif args.subparser_name == "run":
         uncovered = make_output.get_coverage_genes(args.bam, args.pipeline_dir, args.sample_name)
         mut_list_lofreq = mf.recover_low_freq(args.bam)
     else:
+        uncovered = None
         mut_list_lofreq = []
     mut_list_sample = list(set(mut_list_lofreq + mut_list_sample))
     make_output.make_final_tables(mut_list_sample, gt.resistances, mut_list_var, gt.epitopes, uncovered, args.pipeline_dir, args.sample_name)

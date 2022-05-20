@@ -68,7 +68,9 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, unco
                 start = int(''.join([x for x in mutation if x.isdigit()]))
                 stop = start
             for pos in range(start, stop+1):
-                if (gene, pos) in uncovered:
+                if uncovered is None:
+                    coverage_status = "Unknown"
+                elif (gene, pos) in uncovered:
                     coverage_status = "False"
                     break
             columns.append(coverage_status)
