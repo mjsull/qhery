@@ -1,8 +1,12 @@
 # qhery
-
-![release](https://img.shields.io/github/v/release/mjsull/qhery) ![license](https://img.shields.io/badge/license-GPLv3-green)
+## Identification of mutations in SARS-CoV-2 associated with resistance to treatment.
 ___
 
+
+![release](https://img.shields.io/github/v/release/mjsull/qhery) ![license](https://img.shields.io/badge/license-GPLv3-green)
+
+**qhery** was developed by the Q-PHIRE Genomics team at Forensic and Scientific Services, Queensland Health. 
+___
 
 ## Table of contents
 

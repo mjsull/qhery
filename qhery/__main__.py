@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import get_mutants
 import get_tables_sql
 import make_output
