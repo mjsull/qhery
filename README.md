@@ -1,7 +1,7 @@
 # qhery
 
 ## 
-![release](https://img.shields.io/github/v/release/mjsull/qhery) ![license](https://img.shields.io/badge/license-GPLv3-green) [![DOI](https://zenodo.org/badge/97623186.svg)](https://zenodo.org/badge/latestdoi/97623186)
+![release](https://img.shields.io/github/v/release/mjsull/qhery) ![license](https://img.shields.io/badge/license-GPLv3-green)
 
 
 
@@ -9,10 +9,10 @@
 
 #### git
 
-At the moment qhery can only be installed by downloading from git
+While in development qhery can only be installed by downloading from git
 
 ```
-git clone https://
+git clone https://github.com/mjsull/qhery.git
 ```
 
 
@@ -32,16 +32,18 @@ cannot be reported on due to lack of coverage.
 
 ### Example usage: 
 
-`qhery run --database_dir database_dir --vcf sample.vcf --pipeline_dir output_dir --lineage Omicron/BA.1 --sample_name mysample --rx_list Sotrovimab Remdesivir`
+`qhery run --database_dir database_dir --vcf sample.vcf --pipeline_dir output_dir --lineage Omicron/BA.1 --sample_name mysample --rx_list Sotrovimab`
 
+Determines the amino acid changes caused by the mutations listed in sample.vcf and then compares them to a list of mutations that cause a reduction in Sotrovimab binding.
 
 `qhery run --database_dir database_dir --vcf sample.vcf --pipeline_dir output_dir --lineage Omicron/BA.1 --sample_name mysample --rx_list Sotrovimab Remdesivir --fasta sample.consensus.fasta --bam sample.primertrimmed.rg.sorted.bam` 
 
-
+Determines the amino acid changes caused by the mutations listed in sample.vcf. Additionally will use lofreq to find minor alleles in the BAM file. Finally they are  compared to a list of mutations that cause a reduction in Sotrovimab binding or reduction in Remdesivir efficiency.
  
 
 `qhery list_rx`
 
+List treatments for which resistance information exists.
 
 
 ### Example output:
@@ -179,6 +181,8 @@ report lineage defining mutations as well
 <hr style="border:1px solid gray">
 
 
-##Method
+## Method
 
-PIC GOES HERE
+A flowchart of how qhery run works
+
+![flowchart](https://github.com/mjsull/qhery/blob/master/paper/flowchart.svg?raw=true)
