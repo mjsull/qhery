@@ -229,5 +229,5 @@ report lineage defining mutations as well
 
 A flowchart of how ``qhery run`` works
 
-![flowchart](https://github.com/mjsull/qhery/blob/master/paper/flowchart.svg?raw=true)
+![flowchart](https://github.com/mjsull/qhery/blob/main/paper/flowchart.svg?raw=true)
 ````
