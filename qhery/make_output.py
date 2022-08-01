@@ -1,6 +1,8 @@
 import subprocess
 import os
+import pysam
 from collections import defaultdict
+
 
 
 def get_mutant_name_ref(mut):
@@ -11,10 +13,11 @@ def get_mutant_name_ref(mut):
 
 
 
-def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, uncovered, pipeline_folder, sample_name, min_fold_reduction_to_report=2):
+def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, pipeline_folder, sample_name, bam_file, aa_to_nuc_dict, min_fold_reduction_to_report=2):
     with open(os.path.join(pipeline_folder, sample_name + '.full.tsv'), 'w') as full_table, \
         open(os.path.join(pipeline_folder, sample_name + '.final.tsv'), 'w') as final_table:
-        headers = ["Mutation", "alt_names", "in_sample", "in_variant", "covered", "resistance_mutation"]
+        headers = ["Mutation", "alt_names", "in_sample", "in_variant", "covered", "resistance_mutation", "codon_present", "codons", "codon_depth"]
+        min_depth = 20
         drug_list = list(resistance_muts)
         drug_list.sort()
         for i in drug_list:
@@ -60,20 +63,29 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, unco
             else:
                 columns.append("False")
             gene, mutation = i.split(':')
-            coverage_status = "True"
             if "-" in mutation:
                 start = int(''.join([x for x in mutation.split('-')[0] if x.isdigit()]))
                 stop = int(''.join([x for x in mutation.split('-')[1] if x.isdigit()]))
             else:
                 start = int(''.join([x for x in mutation if x.isdigit()]))
                 stop = start
-            for pos in range(start, stop+1):
-                if uncovered is None:
-                    coverage_status = "Unknown"
-                elif (gene, pos) in uncovered:
-                    coverage_status = "False"
-                    break
+            codon_usage, codon_depth = get_codons(bam_file, aa_to_nuc_dict[gene][start])
+            if codon_depth >= min_depth:
+                coverage_status = "True"
+            else:
+                coverage_status = "False"
             columns.append(coverage_status)
+            mutant_base = ""
+            for j in i:
+                if j.isdigit():
+                    mutant_base = ""
+                else:
+                    mutant_base += j
+            codon_freq = 0
+            for j in codon_usage.split("("):
+                if j.split(")")[0] == mutant_base:
+                    codon_freq = float(j.split(":")[1].split(';')[0][:-1])
+                    break
             rx_columns = []
             above_min_fold_reduction = "False"
             for j in drug_list:
@@ -97,6 +109,11 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, unco
                             break
                 rx_columns.append(in_epitope)
             columns.append(above_min_fold_reduction)
+            if codon_freq > 5 and codon_depth >= min_depth:
+                codon_present = "True"
+            else:
+                codon_present = "False"
+            columns += [codon_present, codon_usage, str(codon_depth)]
             columns += rx_columns
             outline = "\t".join(columns) + "\n"
             full_table.write(outline)
@@ -106,7 +123,7 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, unco
                 final_table.write(outline)
 
 
-def get_coverage_genes(bam_file, pipeline_folder, sample_name, min_cov=20):
+def get_nuc_aa_translations():
     orf_coords = {
         "nsp1": (266, 805),
         "nsp2": (806, 2719),
@@ -124,12 +141,20 @@ def get_coverage_genes(bam_file, pipeline_folder, sample_name, min_cov=20):
         "nsp15": (19621, 20658),
         "nsp16": (20659, 21552)
     }
-    coord_dict = defaultdict(lambda: set())
+    nuc_to_aa_dict = defaultdict(lambda: set())
+    aa_to_nuc_dict = {}
     for i in orf_coords:
+        aa_to_nuc_dict[i] = {}
         for num in range(orf_coords[i][0], orf_coords[i][1]+1):
-            coord_dict[num].add((i, (num - orf_coords[i][0]) //3+1))
+            aa_pos = (num - orf_coords[i][0]) // 3 + 1
+            if not aa_pos in aa_to_nuc_dict[i] or num-1 < aa_to_nuc_dict[i][aa_pos]:
+                aa_to_nuc_dict[i][aa_pos] = num-1
+            nuc_to_aa_dict[num].add((i, aa_pos))
     for num in range(13483, 16237):
-        coord_dict[num].add(("RdRP",  (num - 13483) //3+15))
+        aa_pos = (num - 13483) // 3 + 15
+        if not aa_pos in aa_to_nuc_dict["RdRP"] or num-1 < aa_to_nuc_dict["RdRP"][aa_pos]:
+            aa_to_nuc_dict["RdRP"][aa_pos] = num-1
+        nuc_to_aa_dict[num].add(("RdRP",  aa_pos))
     with open("{}/Sars_cov_2.ASM985889v3.101.gff3".format(os.path.join(os.path.dirname(__file__), 'data'))) as f:
         for line in f:
             if line.startswith("#"):
@@ -140,17 +165,15 @@ def get_coverage_genes(bam_file, pipeline_folder, sample_name, min_cov=20):
                 for i in details.split(';'):
                     if i.startswith("Name="):
                         gene = i.split('=')[1]
+                if not gene in aa_to_nuc_dict:
+                    aa_to_nuc_dict[gene] = {}
                 for num in range(start, stop + 1):
-                    coord_dict[num].add((gene, (num - start) // 3 + 1))
-    cov_file = os.path.join(pipeline_folder, sample_name + '.cov')
-    subprocess.Popen("samtools depth -aa {} > {}".format(bam_file, cov_file), shell=True).wait()
-    uncovered_aa = set()
-    with open(cov_file) as f:
-        for line in f:
-            ref, pos, depth = line.split()
-            if int(depth) < min_cov:
-                uncovered_aa = uncovered_aa.union(coord_dict[int(pos)])
-    return(uncovered_aa)
+                    aa_pos = (num - start) // 3 + 1
+                    if not aa_pos in aa_to_nuc_dict[gene] or num -1 < aa_to_nuc_dict[gene][aa_pos]:
+                        aa_to_nuc_dict[gene][aa_pos] = num -1
+                    nuc_to_aa_dict[num].add((gene, aa_pos))
+    return(nuc_to_aa_dict, aa_to_nuc_dict)
+
 
 
 
@@ -172,3 +195,60 @@ def make_epitope_graphs(bam, epitopes, pipeline_folder, sample_name):
         if positions != []:
             cmd = "bammix -b {} -p {} -o {} ".format(bam, " ".join(positions), os.path.join(pipeline_folder, sample_name + '.' + i))
             subprocess.Popen(cmd, shell=True).wait()
+
+
+def get_aa(codon):
+    codon2aa = {"AAA": "K", "AAC": "N", "AAG": "K", "AAT": "N",
+                "ACA": "T", "ACC": "T", "ACG": "T", "ACT": "T",
+                "AGA": "R", "AGC": "S", "AGG": "R", "AGT": "S",
+                "ATA": "I", "ATC": "I", "ATG": "M", "ATT": "I",
+
+                "CAA": "Q", "CAC": "H", "CAG": "Q", "CAT": "H",
+                "CCA": "P", "CCC": "P", "CCG": "P", "CCT": "P",
+                "CGA": "R", "CGC": "R", "CGG": "R", "CGT": "R",
+                "CTA": "L", "CTC": "L", "CTG": "L", "CTT": "L",
+
+                "GAA": "E", "GAC": "D", "GAG": "E", "GAT": "D",
+                "GCA": "A", "GCC": "A", "GCG": "A", "GCT": "A",
+                "GGA": "G", "GGC": "G", "GGG": "G", "GGT": "G",
+                "GTA": "V", "GTC": "V", "GTG": "V", "GTT": "V",
+
+                "TAA": "_", "TAC": "Y", "TAG": "_", "TAT": "T",
+                "TCA": "S", "TCC": "S", "TCG": "S", "TCT": "S",
+                "TGA": "_", "TGC": "C", "TGG": "W", "TGT": "C",
+                "TTA": "L", "TTC": "F", "TTG": "L", "TTT": "F"}
+    if codon.upper() in codon2aa:
+        return(codon2aa[codon.upper()])
+    else:
+        return("X")
+
+def get_codons(bam_file, start_position):
+    samfile = pysam.AlignmentFile(bam_file, "rb")
+    codonfreq = defaultdict(lambda: 0)
+    for pileupcolumn in samfile.pileup("MN908947.3", start_position):
+        if pileupcolumn.pos != start_position:
+            continue
+        depth = 0
+        for pileupread in pileupcolumn.pileups:
+            if not pileupread.is_del and not pileupread.is_refskip:
+                try:
+                    codon = pileupread.alignment.query_sequence[pileupread.query_position] + \
+                        pileupread.alignment.query_sequence[pileupread.query_position+1] + \
+                        pileupread.alignment.query_sequence[pileupread.query_position+2]
+                    codonfreq[codon] += 1
+                    depth += 1
+                except IndexError:
+                    pass
+            elif pileupread.is_del:
+                codonfreq["del"] += 1
+                depth += 1
+        outstring = ""
+        codonfreqlist = list(codonfreq)
+        codonfreqlist.sort(key=lambda x: codonfreq[x], reverse=True)
+        for i in codonfreq:
+            if i == "del":
+                outstring += "{}:{:.1%};".format(i, codonfreq[i]/depth)
+            else:
+                outstring += "{}({}):{:.1%};".format(i, get_aa(i), codonfreq[i]/depth)
+            depth += codonfreq[i]
+        return([outstring, depth])

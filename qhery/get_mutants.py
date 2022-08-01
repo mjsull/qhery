@@ -15,47 +15,27 @@ class mutantFinder:
         self.populate_mature_proteins()
 
     def populate_mature_proteins(self):
-
-        self.mature_protein_coords = {
-            "ENSSAST00005000002":{
-                "nsp1":(266, 805),
-                "nsp2": (806, 2719),
-                "PLpro": (2720, 8554),
-                "nsp4": (8555, 10054),
-                "_3CLpro": (10055, 10972), #3C
-                "nsp6": (10973, 11842), #
-                "nsp7": (11843, 12091),
-                "nsp8": (12092, 12685),
-                "nsp9": (12686, 13024),
-                "nsp10": (13025, 13441),
-                "RdRP": (13442, 16236), #rdrp
-                "nsp13": (16237, 18039),
-                "nsp14": (18040, 19620),
-                "nsp15": (19621, 20658),
-                "nsp16": (20659, 21552)
-            },
-            "ENSSAST00005000003":{
-                "nsp1":(266, 805),
-                "nsp2": (806, 2719),
-                "PLpro": (2720, 8554),
-                "nsp4": (8555, 10054),
-                "_3CLpro": (10055, 10972), #3C
-                "nsp6": (10973, 11842), #
-                "nsp7": (11843, 12091),
-                "nsp8": (12092, 12685),
-                "nsp9": (12686, 13024),
-                "nsp10": (13025, 13441),
-                "RdRP": (13442, 13480)
-            }
-        }
-        self.mature_proteins_lookup = {
-            "ENSSAST00005000002":{},
-            "ENSSAST00005000003":{}
-        }
-        offset = {
-            "ENSSAST00005000002": 13468,
-            "ENSSAST00005000003": 266
-        }
+        self.mature_protein_coords = {}
+        self.mature_proteins_lookup = {}
+        with open(os.path.join(self.data_dir, "nsp_coords.tsv")) as f:
+            for line in f:
+                parent, name, start, stop = line.split()
+                start, stop = int(start), int(stop)
+                if not parent in self.mature_protein_coords:
+                    self.mature_protein_coords[parent] = {}
+                    self.mature_proteins_lookup[parent] = {}
+                self.mature_protein_coords[parent][name] = (start, stop)
+        offset = {}
+        with open(os.path.join(self.data_dir, "Sars_cov_2.ASM985889v3.101.gff3")) as f:
+            for line in f:
+                if line.startswith("#"):
+                    continue
+                else:
+                    ref, method, feature, start, stop, frame, strand, qual, extra = line.rstrip().split("\t")
+                    if feature == "mRNA":
+                        for i in extra.split(';'):
+                            if i.startswith("transcript_id="):
+                                offset[i.split('=')[1]] = int(start)
         for i in self.mature_protein_coords:
             for j in self.mature_protein_coords[i]:
                 start, stop = self.mature_protein_coords[i][j]
