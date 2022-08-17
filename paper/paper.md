@@ -32,11 +32,11 @@ for macOS, GNU/Linux and Windows from https://github.com/mjsull/qhery/
 
 # Introduction 
 
-Antivirals and neutralising monocolanl antibodies (mAbs) are now extensively
+Antivirals and neutralising monoclonal antibodies (mAbs) are now extensively
 used for the prevention and treatment of COVID-19. Unfortunately, the virus
 SARS-CoV-2 is able to rapidly adapt to escape treatment[@RN1]. SARS-CoV-2 has been
-shown to adapt to escape binding of Sotrovimab in patients. It has also been shown
-to adapt to antiviral treatments.
+shown to adapt to escape binding of Sotrovimab in patients. Mechanisms that reduce
+the effectiveness of 
 
 The Stanford Coronavirus Antiviral & Resistance database (CoV-RDB)[@RN2] has comprehensively 
 curated published data on the neutralising susceptibility of SARS-CoV-2 variants and
@@ -45,7 +45,8 @@ with a consensus sequence can annotate mutations. These mutations are then check
 the Cov-RDB to determine whether mutations may cause a decrease in Mabs susceptibility.
 
 # Statement of Need
-Coronavirus Resistance Database (CoV-RDB) is an excellent tool for the analysis of
+Coronavirus Resistance Database (CoV-RDB) is an excellent tool for the analysis of resistance mutations.
+
 
 limits processing large amounts of data. Privacy concerns. Limited to monoclonal antibodies.
 

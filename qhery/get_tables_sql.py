@@ -35,6 +35,7 @@ class covid_drdb:
         self.database = os.path.join(self.database_folder, db_list[-1])
 
     def connect(self):
+        print(self.database)
         self.con = sqlite3.connect(self.database)
 
     def get_ref(self):
@@ -153,6 +154,8 @@ class covid_drdb:
         self.drug_synonyms = {}
         for i in self.drug_list:
             self.drug_synonyms[i] = [i]
+            if i == "Evusheld":
+                self.drug_synonyms[i].append("CIL+TIX")
             for row in self.con.execute('SELECT abbreviation_name FROM antibodies WHERE ab_name = "{}"'.format(i)):
                 self.drug_synonyms[i].append(row[0])
             for row in self.con.execute('SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i)):
@@ -172,4 +175,5 @@ class covid_drdb:
         rx_list.sort()
         for i in rx_list:
             sys.stdout.write(i + "\n")
+        return(rx_list)
 

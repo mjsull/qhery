@@ -4,8 +4,7 @@ import subprocess
 import codecs
 
 class mutantFinder:
-    def __init__(self, vcf_file, working_dir, sample_name):
-        self.vcf_file = vcf_file
+    def __init__(self, working_dir, sample_name):
         self.sample_name = sample_name
         self.working_dir = working_dir
         dirname = os.path.dirname(__file__)
@@ -44,13 +43,7 @@ class mutantFinder:
                 for num1, num2, in enumerate(range(start, stop+1)):
                     self.mature_proteins_lookup[i][num2] = [j, num1+1]
 
-
-
-
-
-    def convert_vcf(self, vcf_in=None, vcf_out=None):
-        if vcf_in is None:
-            vcf_in = self.vcf_file
+    def convert_vcf(self, vcf_in, vcf_out=None):
         if vcf_out is None:
             vcf_out = self.bcftools_vcf
         with open(vcf_in) as f, open(vcf_out, 'w') as o:
@@ -70,9 +63,6 @@ class mutantFinder:
             csq_out = self.csq_file
         subprocess.Popen("bcftools csq -f {}/nCoV-2019.reference.fasta -g {}/Sars_cov_2.ASM985889v3.101.gff3  {} -O t -o {}".format(
             self.data_dir, self.data_dir, vcf_in, csq_out), shell=True).wait()
-
-
-
 
     def parse_csq(self, csq_file=None):
         mut_list = []
@@ -151,4 +141,21 @@ class mutantFinder:
         self.run_bcf_csq(vcf_in=converted_vcf, csq_out=lofreq_csq)
         return(self.parse_csq(csq_file=lofreq_csq))
 
+    def run_nucdiff(self, fasta):
+        reference_file = os.path.join(self.data_dir, "nCoV-2019.reference.fasta")
+        subprocess.Popen("nucdiff --vcf yes {} {} {} {}.nucdiff".format(
+            fasta, reference_file, self.working_dir, self.sample_name), shell=True).wait()
+        return(os.path.join(self.working_dir, "results", self.sample_name + '.nucdiff_query_snps.vcf'))
 
+
+
+
+
+
+
+# subject_dict = get_lengths_order(args.proteins)
+# nocov = read_coverage_file(args.coverage)
+# lineage_variants = get_lineage_variants(args.lineage_variants)
+# run_blastx(args.query, args.proteins, args.output_prefix + ".blast")
+#
+# mutations, pos_dict = read_blast(args.output_prefix + '.blast', subject_dict, nocov)

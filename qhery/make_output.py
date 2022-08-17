@@ -69,8 +69,13 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, pipe
             else:
                 start = int(''.join([x for x in mutation if x.isdigit()]))
                 stop = start
-            codon_usage, codon_depth = get_codons(bam_file, aa_to_nuc_dict[gene][start])
-            if codon_depth >= min_depth:
+            if not bam_file is None:
+                codon_usage, codon_depth = get_codons(bam_file, aa_to_nuc_dict[gene][start])
+            else:
+                codon_usage, codon_depth = "", "NA"
+            if codon_depth == "NA":
+                coverage_status = "NA"
+            elif codon_depth >= min_depth:
                 coverage_status = "True"
             else:
                 coverage_status = "False"
@@ -109,7 +114,9 @@ def make_final_tables(sample_muts, resistance_muts, variant_muts, epitopes, pipe
                             break
                 rx_columns.append(in_epitope)
             columns.append(above_min_fold_reduction)
-            if codon_freq > 5 and codon_depth >= min_depth:
+            if codon_depth == "NA":
+                codon_present = "NA"
+            elif codon_freq > 5 and codon_depth >= min_depth:
                 codon_present = "True"
             else:
                 codon_present = "False"
@@ -174,15 +181,6 @@ def get_nuc_aa_translations():
                     nuc_to_aa_dict[num].add((gene, aa_pos))
     return(nuc_to_aa_dict, aa_to_nuc_dict)
 
-
-
-
-def make_alignment_files(fasta, pipeline_folder, sample_name):
-    dirname = os.path.dirname(__file__)
-    data_dir = os.path.join(dirname, 'data')
-    subprocess.Popen("blastx -query {} -subject {} -out {}".format(
-        fasta, os.path.join(data_dir, "proteins.faa"), os.path.join(pipeline_folder, sample_name + '.blastx_alignment.txt')),
-        shell=True).wait()
 
 def make_epitope_graphs(bam, epitopes, pipeline_folder, sample_name):
     SPIKE_PROTEIN_START = 21563
@@ -252,3 +250,10 @@ def get_codons(bam_file, start_position):
                 outstring += "{}({}):{:.1%};".format(i, get_aa(i), codonfreq[i]/depth)
             depth += codonfreq[i]
         return([outstring, depth])
+
+def make_alignment_files(fasta, pipeline_folder, sample_name):
+    dirname = os.path.dirname(__file__)
+    data_dir = os.path.join(dirname, 'data')
+    subprocess.Popen("blastx -query {} -subject {} -out {}".format(
+        fasta, os.path.join(data_dir, "proteins.faa"), os.path.join(pipeline_folder, sample_name + '.blastx_alignment.txt')),
+        shell=True).wait()

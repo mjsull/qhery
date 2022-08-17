@@ -21,11 +21,11 @@ list_parser = subparsers.add_parser("list_rx", help="Print list of treatements w
 list_parser.add_argument("--database_dir", "-d", help="Directory with latest Stanford resistance database.")
 
 run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
-run_parser.add_argument("--sample_name", "-n", help="Sample name.")
+run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
 run_parser.add_argument("--vcf", "-v", help="vcf file")
 run_parser.add_argument("--bam", "-b", help="bam file")
-run_parser.add_argument("--database_dir", "-d", help="Directory with latest Stanford resistance database.")
-run_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
+run_parser.add_argument("--database_dir", "-d", required=True, help="Directory with latest Stanford resistance database.")
+run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
 run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
 run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
 run_parser.add_argument("--fasta", "-f", help="Consensus fasta.")
@@ -56,8 +56,8 @@ elif args.subparser_name == "mutations":
         mut_list_var = gt.get_variant_mutations(args.lineage)
     else:
         mut_list_var = []
-    mf = get_mutants.mutantFinder(args.vcf, args.pipeline_dir, args.sample_name)
-    mf.convert_vcf()
+    mf = get_mutants.mutantFinder(args.pipeline_dir, args.sample_name)
+    mf.convert_vcf(args.vcf)
     mf.run_bcf_csq()
     mut_list_sample = mf.parse_csq()
     if not args.bam is None:
@@ -85,6 +85,8 @@ elif args.subparser_name == "run":
         sys.exit(1)
     else:
         os.makedirs(args.pipeline_dir)
+    if args.rx_list is None:
+        args.rx_list = ["Sotrovimab", "Paxlovid", "Remdesivir", "Tixagevimab", "Cilgavimab", "Evusheld"]
     gt = get_tables_sql.covid_drdb(args.rx_list, args.database_dir)
     gt.download_latest()
     gt.connect()
@@ -96,12 +98,21 @@ elif args.subparser_name == "run":
     gt.get_fold_resistance()
     gt.add_local_resitances()
     mut_list_var = gt.get_variant_mutations(args.lineage)
-    mf = get_mutants.mutantFinder(args.vcf, args.pipeline_dir, args.sample_name)
-    mf.convert_vcf()
+    mf = get_mutants.mutantFinder(args.pipeline_dir, args.sample_name)
+    if args.vcf is None and args.fasta is None:
+        sys.stderr.write("Please provide either a FASTA or a VCF file.")
+    elif args.vcf is None and not args.fasta is None:
+        args.vcf = mf.run_nucdiff(args.fasta)
+    elif not args.vcf is None and not args.fasta is None:
+        sys.stdout.write("VCF provided, will not use consensus sequence to determine mutations.\n")
+    mf.convert_vcf(args.vcf)
     mf.run_bcf_csq()
     mut_list_sample = mf.parse_csq()
+    mut_list_sample.sort(
+        key=lambda x: (x.split(':')[0], int('0' + ''.join([n for n in x.split('-')[0] if n.isdigit()]))))
+    print(mut_list_sample)
+    nuc_to_aa_dict, aa_to_nuc_dict = make_output.get_nuc_aa_translations()
     if not args.bam is None:
-        nuc_to_aa_dict, aa_to_nuc_dict = make_output.get_nuc_aa_translations()
         mut_list_lofreq = mf.recover_low_freq(args.bam)
     else:
         uncovered = None
@@ -110,7 +121,6 @@ elif args.subparser_name == "run":
     make_output.make_final_tables(mut_list_sample, gt.resistances, mut_list_var, gt.epitopes, args.pipeline_dir, args.sample_name, args.bam, aa_to_nuc_dict)
     if not args.fasta is None:
         make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)
-
 
 
 
