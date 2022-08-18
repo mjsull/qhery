@@ -1,4 +1,21 @@
-Remdesivir	RdRP	E	802	A	=	2.14
-Remdesivir	RdRP	E	802	D	=	2.54
+Molnupiravir	RdRP	V	557	I	=	2
+Remdesivir	RdRP	A	97	V	=	20
+Remdesivir	RdRP	F	480	L	=	6
+Remdesivir	RdRP	V	557	L	=	6
+Remdesivir	RdRP	V	792	I	*Not determined	0
 Remdesivir	RdRP	C	799	F	*Not determined	0
 Remdesivir	RdRP	E	796	G	*Not determined	0
+Remdesivir	RdRP	E	802	A	=	2.14
+Remdesivir	RdRP	E	802	D	=	2.54
+Paxlovid	_3CLpro	G	15	S	=	4.4
+Paxlovid	_3CLpro	L	50	F	*Not determined	0
+Paxlovid	_3CLpro	Y	54	A	=	23.6
+Paxlovid	_3CLpro	T	135	I	=	3.5
+Paxlovid	_3CLpro	F	140	A	=	39
+Paxlovid	_3CLpro	S	144	A	=	91.9
+Paxlovid	_3CLpro	H	164	N	=	6.4
+Paxlovid	_3CLpro	E	166	A	=	33.4
+Paxlovid	_3CLpro	E	166	V	*Not determined	0
+Paxlovid	_3CLpro	H	172	Y	=	233
+Paxlovid	_3CLpro	Q	189	K	=	65.4
+Paxlovid	_3CLpro	D	248	E	=	3.7
