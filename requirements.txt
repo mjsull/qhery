@@ -4,4 +4,4 @@ curl >= 7.83.1**
 wget >= 1.20.3**
 ncbi-blast+ >= 2.9.0
 lofreq >= 2.1.5
-samtools >= 1.7
+nucdiff >= 2.0.3
