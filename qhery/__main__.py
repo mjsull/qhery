@@ -26,6 +26,7 @@ def main(args=None):
         run_parser.add_argument("--vcf", "-v", help="vcf file")
         run_parser.add_argument("--bam", "-b", help="bam file")
         run_parser.add_argument("--database_dir", "-d", required=True, help="Directory with latest Stanford resistance database.")
+        run_parser.add_argument("--download", help="Download the latest database.", action='store_true', default=False)
         run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
         run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
         run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
@@ -88,7 +89,10 @@ def main(args=None):
         if args.rx_list is None:
             args.rx_list = ["Sotrovimab", "Paxlovid", "Remdesivir", "Tixagevimab", "Cilgavimab", "Evusheld"]
         gt = get_tables_sql.covid_drdb(args.rx_list, args.database_dir)
-        gt.download_latest()
+        if args.download:
+            gt.download_latest()
+        else:
+            gt.get_database()
         gt.connect()
         gt.get_epitopes()
         if not args.bam is None:
