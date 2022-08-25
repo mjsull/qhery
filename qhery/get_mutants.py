@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import codecs
+import warnings
 
 class mutantFinder:
     def __init__(self, working_dir, sample_name):
@@ -73,6 +74,9 @@ class mutantFinder:
                 if not line.startswith("CSQ\t"):
                     continue
                 csq, sample, haplo, chrom, pos, consequence = line.rstrip().split("\t")
+                if consequence.startswith('start_lost'):
+                    warnings.warn("start_lost mutations are not handled in the current version!")
+                    continue
                 mut_type, gene, acc, gene_type, strand, prot_mut, nuc_mut = consequence.split("|")
                 if mut_type.startswith("*"):
                     mut_type = mut_type[1:]
