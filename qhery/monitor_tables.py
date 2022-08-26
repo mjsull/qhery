@@ -2,7 +2,6 @@ import glob
 import sys
 
 
-
 outlines = []
 for tbl1file in glob.glob(sys.argv[1]):
     sys.stdout.write("Searching file {}\n".format(tbl1file))
@@ -26,7 +25,12 @@ for tbl1file in glob.glob(sys.argv[1]):
                 idqld = idqld[1:]
             if idqld.endswith('"'):
                 idqld = idqld[:-1]
-            if query_names.issubset(names) or labnum in sys.argv[2:] or idqld in sys.argv[2:] or "QLD" + idqld in sys.argv[2:]:
+            if (
+                query_names.issubset(names)
+                or labnum in sys.argv[2:]
+                or idqld in sys.argv[2:]
+                or "QLD" + idqld in sys.argv[2:]
+            ):
                 print(labnum, "Ding")
                 outlines.append(line)
 
