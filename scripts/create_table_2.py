@@ -65,11 +65,7 @@ for table in glob.glob(os.path.join(sys.argv[1], "*.final.tsv")):
                 codon_depth,
             ) = line.split("\t")[:9]
             crosses = set()
-            if (
-                covered == "True"
-                and (in_sample == "True" or in_codon == "True")
-                and in_variant == "False"
-            ):
+            if covered == "True" and (in_sample == "True" or in_codon == "True") and in_variant == "False":
                 for i in b_comments:
                     if mutation in b_comments[i]:
                         drug_comments[i] = "B"
@@ -89,21 +85,11 @@ for table in glob.glob(os.path.join(sys.argv[1], "*.final.tsv")):
                 if codon_freq < 90:
                     mut += "*"
                 for num, k in enumerate(resistance_info):
-                    if (
-                        resistance_headers[num] == "Sotrovimab_in_epitope"
-                        and k == "True"
-                    ):
+                    if resistance_headers[num] == "Sotrovimab_in_epitope" and k == "True":
                         crosses.add("†")
-                    elif (
-                        resistance_headers[num] == "Sotrovimab_average_fold_reduction"
-                        and float(k) >= 2
-                    ):
+                    elif resistance_headers[num] == "Sotrovimab_average_fold_reduction" and float(k) >= 2:
                         crosses.add("††")
-                    elif (
-                        resistance_headers[num]
-                        in ["Cilgavimab_in_epitope", "Tixagevimab_in_epitope"]
-                        and k == "True"
-                    ):
+                    elif resistance_headers[num] in ["Cilgavimab_in_epitope", "Tixagevimab_in_epitope"] and k == "True":
                         crosses.add("†††")
                     elif (
                         resistance_headers[num]
@@ -132,10 +118,5 @@ for table in glob.glob(os.path.join(sys.argv[1], "*.final.tsv")):
                 muts = mut_dict[i[0]]
             else:
                 muts = ""
-            sys.stdout.write(
-                "\t".join(
-                    [sample_name, i[0], ", ".join(muts), i[1], drug_comments[i[1]]]
-                )
-                + "\n"
-            )
+            sys.stdout.write("\t".join([sample_name, i[0], ", ".join(muts), i[1], drug_comments[i[1]]]) + "\n")
             sample_name = ""

@@ -11,12 +11,8 @@ class mutantFinder:
         self.working_dir = working_dir
         dirname = os.path.dirname(__file__)
         self.data_dir = os.path.join(dirname, "data")
-        self.bcftools_vcf = os.path.join(
-            working_dir, "{}.bcftools.vcf".format(self.sample_name)
-        )
-        self.csq_file = os.path.join(
-            self.working_dir, "{}.csq.tsv".format(self.sample_name)
-        )
+        self.bcftools_vcf = os.path.join(working_dir, "{}.bcftools.vcf".format(self.sample_name))
+        self.csq_file = os.path.join(self.working_dir, "{}.csq.tsv".format(self.sample_name))
         self.populate_mature_proteins()
 
     def populate_mature_proteins(self):
@@ -99,34 +95,19 @@ class mutantFinder:
                     continue
                 csq, sample, haplo, chrom, pos, consequence = line.rstrip().split("\t")
                 if consequence.startswith("start_lost|"):
-                    warnings.warn(
-                        "start_lost mutations are not handled in the current version!"
-                    )
+                    warnings.warn("start_lost mutations are not handled in the current version!")
                     continue
-                if consequence.startswith("stop_lost|"):
-                    warnings.warn(
-                        "stop_lost mutations are not handled in the current version!"
-                    )
+                if consequence.startswith("stop_lost"):
+                    warnings.warn("stop_lost mutations are not handled in the current version!")
                     continue
                 if consequence.startswith("coding_sequence|"):
-                    warnings.warn(
-                        "coding_sequence mutations are not handled in the current version!"
-                    )
+                    warnings.warn("coding_sequence mutations are not handled in the current version!")
                     continue
-                if consequence.startswith("stop_lost&stop_retained|"):
-                    warnings.warn(
-                        "stop_lost&stop_retained mutations are not handled in the current version!"
-                    )
-                    continue
-                (
-                    mut_type,
-                    gene,
-                    acc,
-                    gene_type,
-                    strand,
-                    prot_mut,
-                    nuc_mut,
-                ) = consequence.split("|")
+                try:
+                    (mut_type, gene, acc, gene_type, strand, prot_mut, nuc_mut) = consequence.split("|")
+                except ValueError as e:
+                    print(consequence)
+                    raise e
                 if mut_type.startswith("*"):
                     mut_type = mut_type[1:]
                 if ">" in prot_mut:
@@ -163,13 +144,7 @@ class mutantFinder:
                             mut_list.append(mut)
                     del_start = len(alt_aa)
                     if len(ref_aa) == del_start + 1:
-                        mut = (
-                            gene
-                            + ":"
-                            + ref_aa[del_start:]
-                            + str(ref_pos + del_start)
-                            + "∆"
-                        )
+                        mut = gene + ":" + ref_aa[del_start:] + str(ref_pos + del_start) + "∆"
                     else:
                         mut = (
                             gene
@@ -182,15 +157,7 @@ class mutantFinder:
                         )
                     mut_list.append(mut)
                 elif mut_type in "inframe_insertion":
-                    mut = (
-                        gene
-                        + ":"
-                        + ref_aa
-                        + str(ref_pos)
-                        + alt_aa[0]
-                        + "_"
-                        + alt_aa[1:]
-                    )
+                    mut = gene + ":" + ref_aa + str(ref_pos) + alt_aa[0] + "_" + alt_aa[1:]
                     mut_list.append(mut)
                 elif mut_type == "frameshift":
                     pass
@@ -205,12 +172,8 @@ class mutantFinder:
         return mut_list
 
     def run_lofreq(self, bam_file, min_cov=20):
-        self.indel_qual_bam = os.path.join(
-            self.working_dir, self.sample_name + ".indelbq.bam"
-        )
-        self.lofreq_vcf = os.path.join(
-            self.working_dir, self.sample_name + ".lofreq.vcf"
-        )
+        self.indel_qual_bam = os.path.join(self.working_dir, self.sample_name + ".indelbq.bam")
+        self.lofreq_vcf = os.path.join(self.working_dir, self.sample_name + ".lofreq.vcf")
         subprocess.Popen(
             "lofreq indelqual -u 5 {} > {}".format(bam_file, self.indel_qual_bam),
             shell=True,
@@ -224,12 +187,8 @@ class mutantFinder:
 
     def recover_low_freq(self, bam_file):
         self.run_lofreq(bam_file)
-        converted_vcf = os.path.join(
-            self.working_dir, self.sample_name + ".lofreq.csq.vcf"
-        )
-        lofreq_csq = os.path.join(
-            self.working_dir, self.sample_name + ".lofreq.csq.tsv"
-        )
+        converted_vcf = os.path.join(self.working_dir, self.sample_name + ".lofreq.csq.vcf")
+        lofreq_csq = os.path.join(self.working_dir, self.sample_name + ".lofreq.csq.tsv")
         self.convert_vcf(vcf_in=self.lofreq_vcf, vcf_out=converted_vcf)
         self.run_bcf_csq(vcf_in=converted_vcf, csq_out=lofreq_csq)
         return self.parse_csq(csq_file=lofreq_csq)
@@ -237,14 +196,10 @@ class mutantFinder:
     def run_nucdiff(self, fasta):
         reference_file = os.path.join(self.data_dir, "nCoV-2019.reference.fasta")
         subprocess.Popen(
-            "nucdiff --vcf yes {} {} {} {}.nucdiff".format(
-                fasta, reference_file, self.working_dir, self.sample_name
-            ),
+            "nucdiff --vcf yes {} {} {} {}.nucdiff".format(fasta, reference_file, self.working_dir, self.sample_name),
             shell=True,
         ).wait()
-        return os.path.join(
-            self.working_dir, "results", self.sample_name + ".nucdiff_query_snps.vcf"
-        )
+        return os.path.join(self.working_dir, "results", self.sample_name + ".nucdiff_query_snps.vcf")
 
 
 # subject_dict = get_lengths_order(args.proteins)

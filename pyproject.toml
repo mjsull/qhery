@@ -23,3 +23,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 qhery = "qhery.__main__:main"
+
+[tool.black]
+line-length = 120
+skip_string_normalization = true
+
+[tool.pylint.format]
+max-line-length = "120"

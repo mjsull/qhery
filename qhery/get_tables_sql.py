@@ -21,9 +21,7 @@ class covid_drdb:
         if os.path.exists(os.path.join(self.database_folder, url.split("/")[-1])):
             sys.stdout.write("Latest version already downloaded.\n")
         else:
-            subprocess.Popen(
-                "wget -P {} {}".format(self.database_folder, url), shell=True
-            ).wait()
+            subprocess.Popen("wget -P {} {}".format(self.database_folder, url), shell=True).wait()
         self.database = os.path.join(self.database_folder, url.split("/")[-1])
 
     def get_database(self):
@@ -43,9 +41,7 @@ class covid_drdb:
 
     def get_ref(self):
         self.ref_aa = {}
-        for row in self.con.execute(
-            "SELECT gene, position, amino_acid FROM ref_amino_acid"
-        ):
+        for row in self.con.execute("SELECT gene, position, amino_acid FROM ref_amino_acid"):
             gene, position, aa = row
             if not gene in self.ref_aa:
                 self.ref_aa[gene] = {}
@@ -55,9 +51,7 @@ class covid_drdb:
         self.epitopes = {}
         for i in self.drug_list:
             self.epitopes[i] = []
-            for row in self.con.execute(
-                'SELECT position FROM antibody_epitopes WHERE ab_name = "{}"'.format(i)
-            ):
+            for row in self.con.execute('SELECT position FROM antibody_epitopes WHERE ab_name = "{}"'.format(i)):
                 self.epitopes[i].append(row[0])
 
     def get_fold_resistance(self):
@@ -66,9 +60,7 @@ class covid_drdb:
             self.resistances[i] = {}
             for j in self.drug_synonyms[i]:
                 for row in self.con.execute(
-                    'SELECT iso_name, fold_cmp, fold FROM rx_fold WHERE rx_name = "{}"'.format(
-                        j
-                    )
+                    'SELECT iso_name, fold_cmp, fold FROM rx_fold WHERE rx_name = "{}"'.format(j)
                 ):
                     if row[0] in self.iso_dict:
                         if ":" in self.iso_dict[row[0]]:
@@ -85,9 +77,7 @@ class covid_drdb:
         data_dir = os.path.join(dirname, "data")
         with open(os.path.join(data_dir, "resistance_table.tsv")) as f:
             for line in f:
-                rx, gene, refaa, pos, mutaa, symbol, fold_change = line.rstrip().split(
-                    "\t"
-                )
+                rx, gene, refaa, pos, mutaa, symbol, fold_change = line.rstrip().split("\t")
                 mut_name = gene + ":" + refaa + pos + mutaa
                 if not rx in self.resistances:
                     continue
@@ -111,14 +101,10 @@ class covid_drdb:
         self.get_ref()
         self.variant_mutations = {}
         consensus_available = None
-        for row in self.con.execute(
-            'SELECT var_name FROM variant_synonyms WHERE synonym = "{}"'.format(variant)
-        ):
+        for row in self.con.execute('SELECT var_name FROM variant_synonyms WHERE synonym = "{}"'.format(variant)):
             variant = row[0]
         for row in self.con.execute(
-            'SELECT consensus_availability FROM variants WHERE var_name = "{}"'.format(
-                variant
-            )
+            'SELECT consensus_availability FROM variants WHERE var_name = "{}"'.format(variant)
         ):
             consensus_available = row[0]
         if consensus_available is None:
@@ -127,9 +113,7 @@ class covid_drdb:
             sys.stderr.write("Consensus for variant not available.\n")
         mut_list = []
         for row in self.con.execute(
-            'SELECT var_name, gene, position, amino_acid FROM variant_consensus WHERE var_name = "{}"'.format(
-                variant
-            )
+            'SELECT var_name, gene, position, amino_acid FROM variant_consensus WHERE var_name = "{}"'.format(variant)
         ):
             var, gene, pos, aa = row
             if var == variant:
@@ -138,12 +122,7 @@ class covid_drdb:
         lastdel = None
         out_list = []
         for i in mut_list:
-            if (
-                i[3] == "del"
-                and not lastdel is None
-                and lastdel[0] == i[0]
-                and lastdel[1] + lastdel[4] == i[1] - 1
-            ):
+            if i[3] == "del" and not lastdel is None and lastdel[0] == i[0] and lastdel[1] + lastdel[4] == i[1] - 1:
                 lastdel[4] += 1
             else:
                 if not lastdel is None:
@@ -164,9 +143,7 @@ class covid_drdb:
 
     def get_single_mutations(self):
         self.iso_dict = {}
-        for row in self.con.execute(
-            "SELECT iso_name, single_mut_name FROM isolate_mutations_single_s_mut_view"
-        ):
+        for row in self.con.execute("SELECT iso_name, single_mut_name FROM isolate_mutations_single_s_mut_view"):
             iso_name, single_mut_name = row
             self.iso_dict[iso_name] = single_mut_name
 
@@ -176,15 +153,9 @@ class covid_drdb:
             self.drug_synonyms[i] = [i]
             if i == "Evusheld":
                 self.drug_synonyms[i].append("CIL+TIX")
-            for row in self.con.execute(
-                'SELECT abbreviation_name FROM antibodies WHERE ab_name = "{}"'.format(
-                    i
-                )
-            ):
+            for row in self.con.execute('SELECT abbreviation_name FROM antibodies WHERE ab_name = "{}"'.format(i)):
                 self.drug_synonyms[i].append(row[0])
-            for row in self.con.execute(
-                'SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i)
-            ):
+            for row in self.con.execute('SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i)):
                 self.drug_synonyms[i].append(row[0])
 
     def list_rx(self):

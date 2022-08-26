@@ -23,12 +23,8 @@ def main(args=None):
             help="Directory with latest Stanford resistance database.",
         )
 
-        run_parser = subparsers.add_parser(
-            "run", help="Run CoViD resistance identifier."
-        )
-        run_parser.add_argument(
-            "--sample_name", "-n", required=True, help="Sample name."
-        )
+        run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
+        run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
         run_parser.add_argument("--vcf", "-v", help="vcf file")
         run_parser.add_argument("--bam", "-b", help="bam file")
         run_parser.add_argument(
@@ -43,27 +39,19 @@ def main(args=None):
             action="store_true",
             default=False,
         )
-        run_parser.add_argument(
-            "--pipeline_dir", "-p", required=True, help="Pipeline to run program in."
-        )
+        run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
         run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-        run_parser.add_argument(
-            "--rx_list", "-rx", nargs="+", help="List of drugs to analyze."
-        )
+        run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
         run_parser.add_argument("--fasta", "-f", help="Consensus fasta.")
 
-        mut_parser = subparsers.add_parser(
-            "mutations", help="List mutations without resistance information."
-        )
+        mut_parser = subparsers.add_parser("mutations", help="List mutations without resistance information.")
         mut_parser.add_argument("--vcf", "-v", help="List of VCF files")
         mut_parser.add_argument(
             "--database_dir",
             "-d",
             help="Directory with latest Stanford resistance database.",
         )
-        mut_parser.add_argument(
-            "--pipeline_dir", "-p", help="Pipeline to run program in."
-        )
+        mut_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
         mut_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
         mut_parser.add_argument("--sample_name", "-n", help="Sample name.")
         mut_parser.add_argument("--bam", "-b", help="bam file")
@@ -101,9 +89,7 @@ def main(args=None):
             )
         )
         with open(
-            os.path.join(
-                args.pipeline_dir, "{}.mutations.txt".format(args.sample_name)
-            ),
+            os.path.join(args.pipeline_dir, "{}.mutations.txt".format(args.sample_name)),
             "w",
         ) as o:
             for i in all_muts:
@@ -139,9 +125,7 @@ def main(args=None):
         gt.connect()
         gt.get_epitopes()
         if not args.bam is None:
-            make_output.make_epitope_graphs(
-                args.bam, gt.epitopes, args.pipeline_dir, args.sample_name
-            )
+            make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
         gt.get_synonyms()
         gt.get_single_mutations()
         gt.get_fold_resistance()
@@ -153,9 +137,7 @@ def main(args=None):
         elif args.vcf is None and not args.fasta is None:
             args.vcf = mf.run_nucdiff(args.fasta)
         elif not args.vcf is None and not args.fasta is None:
-            sys.stdout.write(
-                "VCF provided, will not use consensus sequence to determine mutations.\n"
-            )
+            sys.stdout.write("VCF provided, will not use consensus sequence to determine mutations.\n")
         mf.convert_vcf(args.vcf)
         mf.run_bcf_csq()
         mut_list_sample = mf.parse_csq()
@@ -184,6 +166,4 @@ def main(args=None):
             aa_to_nuc_dict,
         )
         if not args.fasta is None:
-            make_output.make_alignment_files(
-                args.fasta, args.pipeline_dir, args.sample_name
-            )
+            make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)

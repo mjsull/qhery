@@ -22,9 +22,7 @@ def make_final_tables(
     aa_to_nuc_dict,
     min_fold_reduction_to_report=2,
 ):
-    with open(
-        os.path.join(pipeline_folder, sample_name + ".full.tsv"), "w"
-    ) as full_table, open(
+    with open(os.path.join(pipeline_folder, sample_name + ".full.tsv"), "w") as full_table, open(
         os.path.join(pipeline_folder, sample_name + ".final.tsv"), "w"
     ) as final_table:
         headers = [
@@ -95,9 +93,7 @@ def make_final_tables(
                 start = int("".join([x for x in mutation if x.isdigit()]))
                 stop = start
             if not bam_file is None:
-                codon_usage, codon_depth = get_codons(
-                    bam_file, aa_to_nuc_dict[gene][start]
-                )
+                codon_usage, codon_depth = get_codons(bam_file, aa_to_nuc_dict[gene][start])
             else:
                 codon_usage, codon_depth = "", "NA"
             if codon_depth == "NA":
@@ -132,10 +128,7 @@ def make_final_tables(
                         "{:.2f}".format(tot_res / len(resistance_muts[j][i])),
                         col,
                     ]
-                    if (
-                        tot_res / len(resistance_muts[j][i])
-                        >= min_fold_reduction_to_report
-                    ):
+                    if tot_res / len(resistance_muts[j][i]) >= min_fold_reduction_to_report:
                         above_min_fold_reduction = "True"
                 else:
                     rx_columns += ["0", "-"]
@@ -157,11 +150,7 @@ def make_final_tables(
             columns += rx_columns
             outline = "\t".join(columns) + "\n"
             full_table.write(outline)
-            if (
-                columns[2] == "True"
-                and columns[3] == "False"
-                and columns[0].split(":")[0] in resistance_genes
-            ):
+            if columns[2] == "True" and columns[3] == "False" and columns[0].split(":")[0] in resistance_genes:
                 final_table.write(outline)
             elif columns[4] == "False" and columns[5] == "True":
                 final_table.write(outline)
@@ -196,17 +185,10 @@ def get_nuc_aa_translations():
             nuc_to_aa_dict[num].add((i, aa_pos))
     for num in range(13483, 16237):
         aa_pos = (num - 13483) // 3 + 15
-        if (
-            not aa_pos in aa_to_nuc_dict["RdRP"]
-            or num - 1 < aa_to_nuc_dict["RdRP"][aa_pos]
-        ):
+        if not aa_pos in aa_to_nuc_dict["RdRP"] or num - 1 < aa_to_nuc_dict["RdRP"][aa_pos]:
             aa_to_nuc_dict["RdRP"][aa_pos] = num - 1
         nuc_to_aa_dict[num].add(("RdRP", aa_pos))
-    with open(
-        "{}/Sars_cov_2.ASM985889v3.101.gff3".format(
-            os.path.join(os.path.dirname(__file__), "data")
-        )
-    ) as f:
+    with open("{}/Sars_cov_2.ASM985889v3.101.gff3".format(os.path.join(os.path.dirname(__file__), "data"))) as f:
         for line in f:
             if line.startswith("#"):
                 continue
@@ -230,10 +212,7 @@ def get_nuc_aa_translations():
                     aa_to_nuc_dict[gene] = {}
                 for num in range(start, stop + 1):
                     aa_pos = (num - start) // 3 + 1
-                    if (
-                        not aa_pos in aa_to_nuc_dict[gene]
-                        or num - 1 < aa_to_nuc_dict[gene][aa_pos]
-                    ):
+                    if not aa_pos in aa_to_nuc_dict[gene] or num - 1 < aa_to_nuc_dict[gene][aa_pos]:
                         aa_to_nuc_dict[gene][aa_pos] = num - 1
                     nuc_to_aa_dict[num].add((gene, aa_pos))
     return (nuc_to_aa_dict, aa_to_nuc_dict)
@@ -341,12 +320,8 @@ def get_codons(bam_file, start_position):
                 try:
                     codon = (
                         pileupread.alignment.query_sequence[pileupread.query_position]
-                        + pileupread.alignment.query_sequence[
-                            pileupread.query_position + 1
-                        ]
-                        + pileupread.alignment.query_sequence[
-                            pileupread.query_position + 2
-                        ]
+                        + pileupread.alignment.query_sequence[pileupread.query_position + 1]
+                        + pileupread.alignment.query_sequence[pileupread.query_position + 2]
                     )
                     codonfreq[codon] += 1
                     depth += 1
