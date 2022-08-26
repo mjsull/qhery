@@ -74,8 +74,17 @@ class mutantFinder:
                 if not line.startswith("CSQ\t"):
                     continue
                 csq, sample, haplo, chrom, pos, consequence = line.rstrip().split("\t")
-                if consequence.startswith('start_lost'):
+                if consequence.startswith('start_lost|'):
                     warnings.warn("start_lost mutations are not handled in the current version!")
+                    continue
+                if consequence.startswith('stop_lost|'):
+                    warnings.warn("stop_lost mutations are not handled in the current version!")
+                    continue
+                if consequence.startswith('coding_sequence|'):
+                    warnings.warn("coding_sequence mutations are not handled in the current version!")
+                    continue
+                if consequence.startswith('stop_lost&stop_retained|'):
+                    warnings.warn("stop_lost&stop_retained mutations are not handled in the current version!")
                     continue
                 mut_type, gene, acc, gene_type, strand, prot_mut, nuc_mut = consequence.split("|")
                 if mut_type.startswith("*"):
