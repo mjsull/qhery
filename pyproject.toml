@@ -5,7 +5,7 @@ description = "SARS-CoV-2 resistance analysis tool."
 authors = ["Mitchell Sullivan <mjsull@gmail.com>"]
 readme = "README.md"
 
-[project.urls]
+[tool.poetry.urls]
 "Homepage" = "https://github.com/mjsull/qhery"
 "Bug Tracker" = "https://github.com/mjsull/qhery/issues"
 
