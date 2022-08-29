@@ -2,13 +2,15 @@ import sys
 import os
 import subprocess
 import codecs
+import warnings
+
 
 class mutantFinder:
     def __init__(self, working_dir, sample_name):
         self.sample_name = sample_name
         self.working_dir = working_dir
         dirname = os.path.dirname(__file__)
-        self.data_dir = os.path.join(dirname, 'data')
+        self.data_dir = os.path.join(dirname, "data")
         self.bcftools_vcf = os.path.join(working_dir, "{}.bcftools.vcf".format(self.sample_name))
         self.csq_file = os.path.join(self.working_dir, "{}.csq.tsv".format(self.sample_name))
         self.populate_mature_proteins()
@@ -30,27 +32,42 @@ class mutantFinder:
                 if line.startswith("#"):
                     continue
                 else:
-                    ref, method, feature, start, stop, frame, strand, qual, extra = line.rstrip().split("\t")
+                    (
+                        ref,
+                        method,
+                        feature,
+                        start,
+                        stop,
+                        frame,
+                        strand,
+                        qual,
+                        extra,
+                    ) = line.rstrip().split("\t")
                     if feature == "mRNA":
-                        for i in extra.split(';'):
+                        for i in extra.split(";"):
                             if i.startswith("transcript_id="):
-                                offset[i.split('=')[1]] = int(start)
+                                offset[i.split("=")[1]] = int(start)
         for i in self.mature_protein_coords:
             for j in self.mature_protein_coords[i]:
                 start, stop = self.mature_protein_coords[i][j]
-                start = (start-offset[i]) //3 + 1
-                stop = (stop-offset[i]) //3 + 1
-                for num1, num2, in enumerate(range(start, stop+1)):
-                    self.mature_proteins_lookup[i][num2] = [j, num1+1]
+                start = (start - offset[i]) // 3 + 1
+                stop = (stop - offset[i]) // 3 + 1
+                for (
+                    num1,
+                    num2,
+                ) in enumerate(range(start, stop + 1)):
+                    self.mature_proteins_lookup[i][num2] = [j, num1 + 1]
 
     def convert_vcf(self, vcf_in, vcf_out=None):
         if vcf_out is None:
             vcf_out = self.bcftools_vcf
-        with open(vcf_in) as f, open(vcf_out, 'w') as o:
+        with open(vcf_in) as f, open(vcf_out, "w") as o:
             for line in f:
                 if line.startswith("##source"):
                     o.write(line)
-                    o.write('##contig=<ID=MN908947.3,length=29903,assembly=MN908947.3,species="SARS-CoV-2",taxonomy=x>\n')
+                    o.write(
+                        '##contig=<ID=MN908947.3,length=29903,assembly=MN908947.3,species="SARS-CoV-2",taxonomy=x>\n'
+                    )
                 elif line.startswith("##"):
                     o.write(line)
                 else:
@@ -61,19 +78,36 @@ class mutantFinder:
             vcf_in = self.bcftools_vcf
         if csq_out is None:
             csq_out = self.csq_file
-        subprocess.Popen("bcftools csq -f {}/nCoV-2019.reference.fasta -g {}/Sars_cov_2.ASM985889v3.101.gff3  {} -O t -o {}".format(
-            self.data_dir, self.data_dir, vcf_in, csq_out), shell=True).wait()
+        subprocess.Popen(
+            "bcftools csq -f {}/nCoV-2019.reference.fasta -g {}/Sars_cov_2.ASM985889v3.101.gff3  {} -O t -o {}".format(
+                self.data_dir, self.data_dir, vcf_in, csq_out
+            ),
+            shell=True,
+        ).wait()
 
     def parse_csq(self, csq_file=None):
         mut_list = []
         if csq_file is None:
             csq_file = self.csq_file
-        with codecs.open(csq_file, 'r', encoding='utf-8', errors='ignore') as f:
+        with codecs.open(csq_file, "r", encoding="utf-8", errors="ignore") as f:
             for line in f:
                 if not line.startswith("CSQ\t"):
                     continue
                 csq, sample, haplo, chrom, pos, consequence = line.rstrip().split("\t")
-                mut_type, gene, acc, gene_type, strand, prot_mut, nuc_mut = consequence.split("|")
+                if consequence.startswith("start_lost|"):
+                    warnings.warn("start_lost mutations are not handled in the current version!")
+                    continue
+                if consequence.startswith("stop_lost"):
+                    warnings.warn("stop_lost mutations are not handled in the current version!")
+                    continue
+                if consequence.startswith("coding_sequence|"):
+                    warnings.warn("coding_sequence mutations are not handled in the current version!")
+                    continue
+                try:
+                    (mut_type, gene, acc, gene_type, strand, prot_mut, nuc_mut) = consequence.split("|")
+                except ValueError as e:
+                    print(consequence)
+                    raise e
                 if mut_type.startswith("*"):
                     mut_type = mut_type[1:]
                 if ">" in prot_mut:
@@ -101,37 +135,55 @@ class mutantFinder:
                     mut_list.append(mut)
                 elif mut_type == "missense" and len(ref_aa) == len(alt_aa):
                     for i in range(len(ref_aa)):
-                        mut = gene + ':' + ref_aa[i] + str(ref_pos+i) + alt_aa[i]
+                        mut = gene + ":" + ref_aa[i] + str(ref_pos + i) + alt_aa[i]
                         mut_list.append(mut)
                 elif mut_type == "inframe_deletion":
                     for i in range(len(alt_aa)):
                         if alt_aa[i] != ref_aa[i]:
-                            mut = gene + ':' + ref_aa[i] + str(ref_pos+i) + alt_aa[i]
+                            mut = gene + ":" + ref_aa[i] + str(ref_pos + i) + alt_aa[i]
                             mut_list.append(mut)
                     del_start = len(alt_aa)
                     if len(ref_aa) == del_start + 1:
-                        mut = gene + ':' + ref_aa[del_start:] + str(ref_pos + del_start) + "∆"
+                        mut = gene + ":" + ref_aa[del_start:] + str(ref_pos + del_start) + "∆"
                     else:
-                        mut = gene + ':' + ref_aa[del_start:] + str(ref_pos + del_start) + '-' + str(ref_pos + len(ref_aa)-1) + "∆"
+                        mut = (
+                            gene
+                            + ":"
+                            + ref_aa[del_start:]
+                            + str(ref_pos + del_start)
+                            + "-"
+                            + str(ref_pos + len(ref_aa) - 1)
+                            + "∆"
+                        )
                     mut_list.append(mut)
                 elif mut_type in "inframe_insertion":
-                    mut = gene + ':' + ref_aa + str(ref_pos) + alt_aa[0] + '_' + alt_aa[1:]
+                    mut = gene + ":" + ref_aa + str(ref_pos) + alt_aa[0] + "_" + alt_aa[1:]
                     mut_list.append(mut)
                 elif mut_type == "frameshift":
                     pass
                 else:
-                    sys.stderr.write("{}\nI haven't seen this mutation before, what do I do?!?!?!?!?!!?!!!  ...ignoring....\n".format(mut_type))
+                    sys.stderr.write(
+                        "{}\nI haven't seen this mutation before, what do I do?!?!?!?!?!!?!!!  ...ignoring....\n".format(
+                            mut_type
+                        )
+                    )
         mut_list = set(mut_list)
         mut_list = list(mut_list)
-        return(mut_list)
+        return mut_list
 
     def run_lofreq(self, bam_file, min_cov=20):
         self.indel_qual_bam = os.path.join(self.working_dir, self.sample_name + ".indelbq.bam")
         self.lofreq_vcf = os.path.join(self.working_dir, self.sample_name + ".lofreq.vcf")
-        subprocess.Popen("lofreq indelqual -u 5 {} > {}".format(bam_file, self.indel_qual_bam), shell=True).wait()
-        subprocess.Popen("lofreq call --call-indels -C 20 -f {}/nCoV-2019.reference.fasta {} > {}".format(self.data_dir, self.indel_qual_bam, self.lofreq_vcf), shell=True).wait()
-
-
+        subprocess.Popen(
+            "lofreq indelqual -u 5 {} > {}".format(bam_file, self.indel_qual_bam),
+            shell=True,
+        ).wait()
+        subprocess.Popen(
+            "lofreq call --call-indels -C 20 -f {}/nCoV-2019.reference.fasta {} > {}".format(
+                self.data_dir, self.indel_qual_bam, self.lofreq_vcf
+            ),
+            shell=True,
+        ).wait()
 
     def recover_low_freq(self, bam_file):
         self.run_lofreq(bam_file)
@@ -139,18 +191,15 @@ class mutantFinder:
         lofreq_csq = os.path.join(self.working_dir, self.sample_name + ".lofreq.csq.tsv")
         self.convert_vcf(vcf_in=self.lofreq_vcf, vcf_out=converted_vcf)
         self.run_bcf_csq(vcf_in=converted_vcf, csq_out=lofreq_csq)
-        return(self.parse_csq(csq_file=lofreq_csq))
+        return self.parse_csq(csq_file=lofreq_csq)
 
     def run_nucdiff(self, fasta):
         reference_file = os.path.join(self.data_dir, "nCoV-2019.reference.fasta")
-        subprocess.Popen("nucdiff --vcf yes {} {} {} {}.nucdiff".format(
-            fasta, reference_file, self.working_dir, self.sample_name), shell=True).wait()
-        return(os.path.join(self.working_dir, "results", self.sample_name + '.nucdiff_query_snps.vcf'))
-
-
-
-
-
+        subprocess.Popen(
+            "nucdiff --vcf yes {} {} {} {}.nucdiff".format(fasta, reference_file, self.working_dir, self.sample_name),
+            shell=True,
+        ).wait()
+        return os.path.join(self.working_dir, "results", self.sample_name + ".nucdiff_query_snps.vcf")
 
 
 # subject_dict = get_lengths_order(args.proteins)
