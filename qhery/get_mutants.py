@@ -85,6 +85,154 @@ class mutantFinder:
             shell=True,
         ).wait()
 
+    def run_nextclade(self, fasta_file, working_dir, sample, data_folder=None):
+        out_tsv = os.path.join(working_dir, sample + ".nextclade.json")
+        if data_folder is None:
+            flag = "-d sars-cov-2"
+        else:
+            flag = "--input-dataset {}".format(data_folder)
+        subprocess.Popen("nextclade run --output-tsv {} {} {}".format(out_tsv, flag, fasta_file), shell=True).wait()
+        return out_tsv
+
+    def get_ref_protein_seq(self):
+        self.ref_protein_seq = {}
+        with open(os.path.join(self.data_dir, "proteins.faa")) as f:
+            for line in f:
+                if line.startswith((">")):
+                    name = line.rstrip()[1:]
+                    self.ref_protein_seq[name] = ""
+                else:
+                    self.ref_protein_seq[name] += line.rstrip()
+
+
+
+    def parse_nextclade(self, nextclade_tsv):
+        self.get_ref_protein_seq()
+        with open(nextclade_tsv) as f:
+            header = f.readline().rstrip().split("\t")
+            for num, i in enumerate(header):
+                if i == "Nextclade_pango":
+                    pango_col = num
+                elif i == "aaSubstitutions":
+                    sub_col = num
+                elif i == "aaDeletions":
+                    del_col = num
+                elif i == "aaInsertions":
+                    ins_col = num
+                elif i == "missing":
+                    miss_col = num
+            data = f.readline().rstrip().split("\t")
+        lineage = data[pango_col]
+        mut_list = []
+        if lineage.startswith("BA."):
+            if lineage == "BA.2.12.1" or lineage == "BA.1.1":
+                lineage = "Omicron/" + lineage
+            else:
+                lineage = "Omicron/BA." + lineage.split('.')[1]
+        if lineage.startswith("B.1.1.7.") or lineage == "B.1.1.7":
+            lineage = "Alpha"
+        elif lineage.startswith("B.1.351.") or lineage == "B.1.351":
+            lineage = "Beta"
+        elif lineage.startswith("B.1.617.2.") or lineage == "B.1.617.2":
+            lineage == "Delta"
+        if not data[sub_col] == "":
+            for sub in data[sub_col].split(','):
+                gene, mut = sub.split(":")
+                ref_pos = int("0" + "".join([n for n in mut if n.isdigit()]))
+                ref, query = mut.split(str(ref_pos))
+                if gene == "ORF1b":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000002"][ref_pos]
+                if gene == "ORF1a":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000003"][ref_pos]
+                sub = gene + ":" + ref + str(ref_pos) + query
+                mut_list.append(sub)
+        if not data[ins_col] == "":
+            for insertion in data[ins_col].split(','):
+                gene, ref_pos, insert = insertion.split(":")
+                ref_pos = int(ref_pos)
+                if gene == "ORF1b":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000002"][ref_pos]
+                if gene == "ORF1a":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000003"][ref_pos]
+                refbase = self.ref_protein_seq[gene][ref_pos-1]
+                mut = gene + ":" + refbase + str(ref_pos) + refbase + "_" + insert
+                mut_list.append(mut)
+        if not data[del_col] == "":
+            deletions = []
+            for deletion in data[del_col].split(','):
+                gene, mut = deletion.split(':')
+                ref_pos = int("0" + "".join([n for n in mut if n.isdigit()]))
+                ref, query = mut.split(str(ref_pos))
+                if gene == "ORF1b":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000002"][ref_pos]
+                if gene == "ORF1a":
+                    gene, ref_pos = self.mature_proteins_lookup["ENSSAST00005000003"][ref_pos]
+                deletions.append((gene, ref_pos, ref))
+            deletions.sort()
+            lastdel = [None, None]
+            merged_deletions = []
+            for i in deletions:
+                if i[0] == lastdel[0] and i[1] == lastdel[1]+1:
+                    delstop = i[1]
+                    delbase += i[2]
+                else:
+                    if lastdel != [None, None]:
+                        if delstart == delstop:
+                            mut = delgene + ":" + delbase + str(delstart) + "∆"
+                        else:
+                            mut = delgene + ':' + delbase + str(delstart) + '-' + str(delstop) + "∆"
+                        merged_deletions.append(mut)
+                    delgene, delstart, delbase = i
+                    delstop = delstart
+                lastdel = [i[0], i[1]]
+            if lastdel != [None, None]:
+                if delstart == delstop:
+                    mut = delgene + ":" + delbase + str(delstart) + "∆"
+                else:
+                    mut = delgene + ':' + delbase + str(delstart) + '-' + str(delstop) + "∆"
+                merged_deletions.append(mut)
+            for i in merged_deletions:
+                if "-" in i:
+                    del_start = int("0" + "".join([n for n in i.split('-')[0] if n.isdigit()]))
+                    del_end = int("0" + "".join([n for n in i.split('-')[1] if n.isdigit()]))
+                else:
+                    del_start = del_end = int("0" + "".join([n for n in i if n.isdigit()]))
+                del_gene = i.split(':')[0]
+                del_bases = i.split(':')[1].split(str(del_start))[0]
+                sub_to_fix = None
+                for j in mut_list:
+                    if '_' in j:
+                        continue
+                    sub_pos = int("0" + "".join([n for n in j if n.isdigit()]))
+                    sub_gene = j.split(':')[0]
+                    if sub_pos == del_end +1 and sub_gene == del_gene:
+                        sub_to_fix = j
+                        break
+                if sub_to_fix is None:
+                    mut_list.append(i)
+                else:
+                    mut_list.remove(sub_to_fix)
+                    sub_ref, sub_query = sub_to_fix.split(':')[1].split(str(sub_pos))
+                    if del_start == del_end:
+                        del_mut = del_gene + ':' + sub_ref + str(del_start+1) + "∆"
+                    else:
+                        del_mut = del_gene + ':' + del_bases[1:] + sub_ref + str(del_start+1) + '-' + str(del_end+1) + "∆"
+                    sub = sub_gene + ':' + del_bases[0] + str(del_start) + sub_query
+                    mut_list.append(del_mut)
+                    mut_list.append(sub)
+        coverage = ["y" for x in range(29903)]
+        if not data[miss_col] == "":
+            for missing in data[miss_col].split(','):
+                if "-" in missing:
+                    start, stop = map(int, missing.split('-'))
+                else:
+                    start = stop = int(missing)
+                for num in range(start-1, stop):
+                    coverage[num] = "n"
+        mut_list = list(filter(lambda x: not "ORF9b" in x, mut_list))
+        return mut_list, coverage, lineage
+
+
     def parse_csq(self, csq_file=None):
         mut_list = []
         if csq_file is None:

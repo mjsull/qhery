@@ -1,7 +1,7 @@
 import sqlite3
 import sys, os
 import subprocess
-
+import urllib.request
 
 class covid_drdb:
     def __init__(self, drug_list, database_folder):
@@ -10,18 +10,15 @@ class covid_drdb:
         self.mutant_synonyms = {}
 
     def download_latest(self):
-        url = subprocess.check_output(
-            "curl -s https://api.github.com/repos/hivdb/covid-drdb-payload/releases/latest | "
-            'grep -P "browser_download_url.*covid-drdb-\d{8}.db" | '
-            'cut -d : -f 2,3 | tr -d \\"',
-            shell=True,
-        )
-        url = url.decode()[1:-1]
+        releases = urllib.request.urlopen("https://api.github.com/repos/hivdb/covid-drdb-payload/releases/latest").read().decode().split(',')
+        for i in releases:
+            if i.startswith('"browser_download_url":') and not i.endswith('-slim.db"}'):
+                url = i.split('"')[3]
         sys.stdout.write("Latest covid-drdb is {}.\n".format(url))
         if os.path.exists(os.path.join(self.database_folder, url.split("/")[-1])):
             sys.stdout.write("Latest version already downloaded.\n")
         else:
-            subprocess.Popen("wget -P {} {}".format(self.database_folder, url), shell=True).wait()
+            urllib.request.urlretrieve(url, os.path.join(self.database_folder, url.split("/")[-1]))
         self.database = os.path.join(self.database_folder, url.split("/")[-1])
 
     def get_database(self):

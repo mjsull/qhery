@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-
-import qhery.get_mutants as get_mutants
-import qhery.get_tables_sql as get_tables_sql
-import qhery.make_output as make_output
 import argparse
 import sys
 import os
@@ -10,53 +6,65 @@ import os
 
 def main(args=None):
     if args is None:
-        parser = argparse.ArgumentParser(prog="covresid")
-        subparsers = parser.add_subparsers(dest="subparser_name")
+        import qhery.get_mutants as get_mutants
+        import qhery.get_tables_sql as get_tables_sql
+        import qhery.make_output as make_output
+    else:
+        print('ding')
+        import get_mutants
+        import get_tables_sql
+        import make_output
+    parser = argparse.ArgumentParser(prog="qhery")
+    subparsers = parser.add_subparsers(dest="subparser_name")
 
-        list_parser = subparsers.add_parser(
-            "list_rx",
-            help="Print list of treatements with recorded mutations and exit.",
-        )
-        list_parser.add_argument(
-            "--database_dir",
-            "-d",
-            help="Directory with latest Stanford resistance database.",
-        )
+    list_parser = subparsers.add_parser(
+        "list_rx",
+        help="Print list of treatements with recorded mutations and exit.",
+    )
+    list_parser.add_argument(
+        "--database_dir",
+        "-d",
+        help="Directory with latest Stanford resistance database.",
+    )
 
-        run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
-        run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
-        run_parser.add_argument("--vcf", "-v", help="vcf file")
-        run_parser.add_argument("--bam", "-b", help="bam file")
-        run_parser.add_argument(
-            "--database_dir",
-            "-d",
-            required=True,
-            help="Directory with latest Stanford resistance database.",
-        )
-        run_parser.add_argument(
-            "--download",
-            help="Download the latest database.",
-            action="store_true",
-            default=False,
-        )
-        run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
-        run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-        run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
-        run_parser.add_argument("--fasta", "-f", help="Consensus fasta.")
+    run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
+    run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
+    run_parser.add_argument("--vcf", "-v", help="vcf file")
+    run_parser.add_argument("--bam", "-b", help="bam file")
+    run_parser.add_argument(
+        "--database_dir",
+        "-d",
+        required=True,
+        help="Directory with latest Stanford resistance database.",
+    )
+    run_parser.add_argument(
+        "--download",
+        help="Download the latest database.",
+        action="store_true",
+        default=False,
+    )
+    run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
+    run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
+    run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
+    run_parser.add_argument("--fasta", "-f", help="Consensus fasta.")
+    run_parser.add_argument("--download_nextclade_data", "-dn", action="store_true", help="download nextclade data.")
+    run_parser.add_argument("--nextclade_data", "-nd", help="directory of sars-cov-2 nextclade data, "
+                            "can be downloaded with "
+                            "\"nextclade dataset get --name 'sars-cov-2' --output-dir 'data/sars-cov-2'\"")
 
-        mut_parser = subparsers.add_parser("mutations", help="List mutations without resistance information.")
-        mut_parser.add_argument("--vcf", "-v", help="List of VCF files")
-        mut_parser.add_argument(
-            "--database_dir",
-            "-d",
-            help="Directory with latest Stanford resistance database.",
-        )
-        mut_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
-        mut_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-        mut_parser.add_argument("--sample_name", "-n", help="Sample name.")
-        mut_parser.add_argument("--bam", "-b", help="bam file")
+    mut_parser = subparsers.add_parser("mutations", help="List mutations without resistance information.")
+    mut_parser.add_argument("--vcf", "-v", help="List of VCF files")
+    mut_parser.add_argument(
+        "--database_dir",
+        "-d",
+        help="Directory with latest Stanford resistance database.",
+    )
+    mut_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
+    mut_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
+    mut_parser.add_argument("--sample_name", "-n", help="Sample name.")
+    mut_parser.add_argument("--bam", "-b", help="bam file")
 
-        args = parser.parse_args()
+    args = parser.parse_args()
 
     if args.subparser_name == "list_rx":
         gt = get_tables_sql.covid_drdb([], args.database_dir)
@@ -78,6 +86,9 @@ def main(args=None):
         mf.run_bcf_csq()
         mut_list_sample = mf.parse_csq()
         if not args.bam is None:
+            if not os.path.exists(args.bam + '.bai'):
+                sys.stderr.write("Please sort and index your bam file before running ")
+                sys.exit(1)
             mut_list_lofreq = mf.recover_low_freq(args.bam)
         else:
             mut_list_lofreq = []
@@ -132,15 +143,27 @@ def main(args=None):
         gt.add_local_resitances()
         mut_list_var = gt.get_variant_mutations(args.lineage)
         mf = get_mutants.mutantFinder(args.pipeline_dir, args.sample_name)
+        fasta_coverage = None
         if args.vcf is None and args.fasta is None:
             sys.stderr.write("Please provide either a FASTA or a VCF file.")
-        elif args.vcf is None and not args.fasta is None:
-            args.vcf = mf.run_nucdiff(args.fasta)
-        elif not args.vcf is None and not args.fasta is None:
-            sys.stdout.write("VCF provided, will not use consensus sequence to determine mutations.\n")
-        mf.convert_vcf(args.vcf)
-        mf.run_bcf_csq()
-        mut_list_sample = mf.parse_csq()
+        if not args.fasta is None:
+            if not args.nextclade_data is None:
+                nextclade_json = mf.run_nextclade(args.fasta, args.pipeline_dir, args.sample_name, args.nextclade_data)
+            elif args.download_nextclade_data:
+                nextclade_json = mf.run_nextclade(args.fasta, args.pipeline_dir, args.sample_name)
+            else:
+                sys.stderr.write("To use a fasta file please provide qhery with a nextclade "
+                                 "data directory or set --download_nextclade_data\n")
+                sys.exit(1)
+            mut_list_sample, fasta_coverage, variant = mf.parse_nextclade(nextclade_json)
+            if args.lineage is None:
+                mut_list_var = gt.get_variant_mutations(variant)
+        if not args.vcf is None:
+            if not args.fasta is None:
+                sys.stdout.write("VCF provided, will not use consensus sequence to determine mutations.\n")
+            mf.convert_vcf(args.vcf)
+            mf.run_bcf_csq()
+            mut_list_sample = mf.parse_csq()
         mut_list_sample.sort(
             key=lambda x: (
                 x.split(":")[0],
@@ -152,7 +175,6 @@ def main(args=None):
         if not args.bam is None:
             mut_list_lofreq = mf.recover_low_freq(args.bam)
         else:
-            uncovered = None
             mut_list_lofreq = []
         mut_list_sample = list(set(mut_list_lofreq + mut_list_sample))
         make_output.make_final_tables(
@@ -164,6 +186,10 @@ def main(args=None):
             args.sample_name,
             args.bam,
             aa_to_nuc_dict,
+            fasta_coverage
         )
         if not args.fasta is None:
             make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)
+
+
+main("command_line")

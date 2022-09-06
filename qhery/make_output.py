@@ -10,6 +10,12 @@ def get_mutant_name_ref(mut):
     else:
         return mut
 
+def get_fasta_depth(fasta_coverage, position):
+    for i in range(position, position + 3):
+        if fasta_coverage[i] == "n":
+            return("not_in_consensus")
+    return("in_consensus")
+
 
 def make_final_tables(
     sample_muts,
@@ -20,6 +26,7 @@ def make_final_tables(
     sample_name,
     bam_file,
     aa_to_nuc_dict,
+    fasta_coverage,
     min_fold_reduction_to_report=2,
 ):
     with open(os.path.join(pipeline_folder, sample_name + ".full.tsv"), "w") as full_table, open(
@@ -94,11 +101,16 @@ def make_final_tables(
                 stop = start
             if not bam_file is None:
                 codon_usage, codon_depth = get_codons(bam_file, aa_to_nuc_dict[gene][start])
+            elif not fasta_coverage is None:
+                codon_usage = ""
+                codon_depth = get_fasta_depth(fasta_coverage, aa_to_nuc_dict[gene][start])
             else:
                 codon_usage, codon_depth = "", "NA"
             if codon_depth == "NA":
                 coverage_status = "NA"
-            elif codon_depth >= min_depth:
+            elif codon_depth == "not_in_consensus":
+                coverage_status = "False"
+            elif codon_depth == "in_consensus" or codon_depth >= min_depth:
                 coverage_status = "True"
             else:
                 coverage_status = "False"
@@ -140,12 +152,14 @@ def make_final_tables(
                             break
                 rx_columns.append(in_epitope)
             columns.append(above_min_fold_reduction)
-            if codon_depth == "NA":
+            if codon_depth == "NA" or codon_depth == "in_consensus" or codon_depth == "not_in_consensus":
                 codon_present = "NA"
             elif codon_freq > 5 and codon_depth >= min_depth:
                 codon_present = "True"
             else:
                 codon_present = "False"
+            if codon_usage == "":
+                codon_usage = "NA"
             columns += [codon_present, codon_usage, str(codon_depth)]
             columns += rx_columns
             outline = "\t".join(columns) + "\n"
