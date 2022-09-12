@@ -3,17 +3,18 @@ import argparse
 import sys
 import os
 
+try:
+    import qhery.get_mutants as get_mutants
+    import qhery.get_tables_sql as get_tables_sql
+    import qhery.make_output as make_output
+except ModuleNotFoundError:
+    import get_mutants
+    import get_tables_sql
+    import make_output
+
+
 
 def main(args=None):
-    if args is None:
-        import qhery.get_mutants as get_mutants
-        import qhery.get_tables_sql as get_tables_sql
-        import qhery.make_output as make_output
-    else:
-        print('ding')
-        import get_mutants
-        import get_tables_sql
-        import make_output
     parser = argparse.ArgumentParser(prog="qhery")
     subparsers = parser.add_subparsers(dest="subparser_name")
 

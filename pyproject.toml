@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "qhery"
-version = "0.1.0"
+version = "0.1.2"
 description = "SARS-CoV-2 resistance analysis tool."
 authors = ["Mitchell Sullivan <mjsull@gmail.com>"]
 readme = "README.md"
