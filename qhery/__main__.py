@@ -135,8 +135,8 @@ def main(args=None):
             gt.get_database()
         gt.connect()
         gt.get_epitopes()
-        if not args.bam is None:
-            make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
+        # if not args.bam is None:
+        #     make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
         gt.get_synonyms()
         gt.get_single_mutations()
         gt.get_fold_resistance()
