@@ -27,7 +27,12 @@ def main(args=None):
         "-d",
         help="Directory with latest Stanford resistance database.",
     )
-
+    list_parser.add_argument(
+        "--download",
+        help="Download the latest database.",
+        action="store_true",
+        default=False,
+    )
     run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
     run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
     run_parser.add_argument("--vcf", "-v", help="vcf file")
@@ -69,7 +74,10 @@ def main(args=None):
 
     if args.subparser_name == "list_rx":
         gt = get_tables_sql.covid_drdb([], args.database_dir)
-        gt.get_database()
+        if args.download:
+            gt.download_latest()
+        else:
+            gt.get_database()
         gt.connect()
         sys.stdout.write("The following MABs have escape information.")
         gt.list_rx()
@@ -125,8 +133,7 @@ def main(args=None):
                 "Sotrovimab",
                 "Paxlovid",
                 "Remdesivir",
-                "Tixagevimab",
-                "Cilgavimab",
+                "Mulnupirivir",
                 "Evusheld",
             ]
         gt = get_tables_sql.covid_drdb(args.rx_list, args.database_dir)

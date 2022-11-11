@@ -54,11 +54,12 @@ limits processing large amounts of data. Privacy concerns. Limited to monoclonal
 
 # Implementation
 
-Qhery is a pythong script available under a GPL license. It runs on macOS, GNU/Linux
+Qhery is a Python script available under a GPL license. It runs on macOS, GNU/Linux
 and Microsoft Windows operating systems. Qhery can be used to assess SARS-CoV-2 for
 mutations that confer resistance to a wide variety of treatments. 
 
-Qhery takes a variant 
+Qhery takes either a variant call format (vcf) file, a FASTA file or a BAM file and converts them into amino acid changes.
+For BAM files, variant calling 
 
 
 ![Flowchart of qhery](https://github.com/mjsull/qhery/blob/main/paper/flowchart.svg?raw=true)
@@ -71,5 +72,10 @@ More text
 
 # Funding
 This work was funded by the Queensland Government.
+
+
+# Acknowledgements
+
+We would like to thank 
 
 # References

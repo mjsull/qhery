@@ -3,6 +3,15 @@ import sys, os
 import subprocess
 import urllib.request
 
+class rx:
+    def __int__(self, name, source, rx_type, combo_ab=None):
+        self.name = name
+        self.source = source
+        self.rx_type = rx_type
+        self.combo_ab = combo_ab
+        self.synonyms = set()
+
+
 class covid_drdb:
     def __init__(self, drug_list, database_folder):
         self.drug_list = drug_list
@@ -110,8 +119,7 @@ class covid_drdb:
             sys.stderr.write("Consensus for variant not available.\n")
         mut_list = []
         for row in self.con.execute(
-            'SELECT var_name, gene, position, amino_acid FROM variant_consensus WHERE var_name = "{}"'.format(variant)
-        ):
+            'SELECT var_name, gene, position, amino_acid FROM variant_consensus WHERE var_name = "{}"'.format(variant)):
             var, gene, pos, aa = row
             if var == variant:
                 mut_list.append([gene, pos, self.ref_aa[gene][pos], aa])
@@ -155,18 +163,62 @@ class covid_drdb:
             for row in self.con.execute('SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i)):
                 self.drug_synonyms[i].append(row[0])
 
-    def list_rx(self):
-        rx_list = set()
-        for row in self.con.execute("SELECT ab_name FROM antibodies"):
-            rx_list.add(row[0])
+    def get_rx(self, eua_only=True, list_synonyms=False):
+        rx_list = []
+
+        # get antibiotic names from antibodies table, add abbreviation to synonyms
+        for row in self.con.execute("SELECT ab_name, abbreviation_name, availability FROM antibodies"):
+            if not eua_only or row[2] == 'EUA':
+                curr_rx = rx(row[0], "covdb", "Antibody")
+                if row[1] != "":
+                    curr_rx.synonyms.add(row[1])
+                rx_list.append(curr_rx)
+
+        # add synonyms to each antibody
+        for i in rx_list:
+            for row in self.con.execute('SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i.name)):
+                i.synonym.add(row[0])
+        # find RX associated with 2 or more antibodies
+        combos = {}
+        for row in self.con.execute("SELECT rx_name, ab_name FROM rx_antibodies"):
+            if not row[0] in combos:
+                combos[row[0]] = [set(), 0]
+            combos[row[0]][1] += 1
+            if row[1] in rx_list:
+                combos[row[0]][0].add(row[1])
+        best_combos = {}
+        for i in combos:
+            if len(combos[i][0]) > 1:
+                combination = list(combos[i][0])
+                combination.sort()
+                combination = tuple(combination)
+                if combination in best_combos and combos[i][1] > best_combos[combination][1]:
+                    synonyms = best_combos[combination][2]
+                    synonyms.add(best_combos[combination][0])
+                    best_combos[combination] = [i, combos[i][1], synonyms]
+                elif combination in best_combos:
+                    best_combos[combination][2].add(i)
+                else:
+                    best_combos[combination] = [i, combos[i][1], set([i])]
+        # get other RX from internal database
+        for i in best_combos:
+            curr_rx = rx(best_combos[i][0], "covdb", "Combination antibody", list(i))
+            curr_rx.synonyms = best_combos[i][2]
+            rx_list.append(curr_rx)
+
+
         dirname = os.path.dirname(__file__)
         data_dir = os.path.join(dirname, "data")
+
         with open(os.path.join(data_dir, "resistance_table.tsv")) as f:
             for line in f:
                 rx, gene, refaa, pos, mutaa, symbol, fold_change = line.split("\t")
-                rx_list.add(rx)
-        rx_list = list(rx_list)
-        rx_list.sort()
+                curr_rx = rx(rx, "internal", "Antiviral")
+                rx_list.append(rx)
+
         for i in rx_list:
-            sys.stdout.write(i + "\n")
-        return rx_list
+
+
+
+        #rx_list = list(rx_list)
+        #rx_list.sort()
