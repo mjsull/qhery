@@ -1,7 +1,6 @@
 python >= 3.9.12**
 bcftools >= 1.10.2**
-curl >= 7.83.1**
-wget >= 1.20.3**
-ncbi-blast+ >= 2.9.0
+samtools >= 1.7.0
 lofreq >= 2.1.5
-nucdiff >= 2.0.3
+nextclade >= 2.8.0
+bammix >= 1.0.0

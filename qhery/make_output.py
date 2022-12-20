@@ -354,16 +354,3 @@ def get_codons(bam_file, start_position):
                 outstring += "{}({}):{:.1%};".format(i, get_aa(i), codonfreq[i] / depth)
             depth += codonfreq[i]
         return [outstring, depth]
-
-
-def make_alignment_files(fasta, pipeline_folder, sample_name):
-    dirname = os.path.dirname(__file__)
-    data_dir = os.path.join(dirname, "data")
-    subprocess.Popen(
-        "blastx -query {} -subject {} -out {}".format(
-            fasta,
-            os.path.join(data_dir, "proteins.faa"),
-            os.path.join(pipeline_folder, sample_name + ".blastx_alignment.txt"),
-        ),
-        shell=True,
-    ).wait()

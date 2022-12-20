@@ -35,22 +35,23 @@ for macOS, GNU/Linux and Windows from https://github.com/mjsull/qhery/
 Antivirals and neutralising monoclonal antibodies (mAbs) are now extensively
 used for the prevention and treatment of COVID-19. Unfortunately, the virus
 SARS-CoV-2 is able to rapidly adapt to escape treatment[@RN1]. SARS-CoV-2 has been
-shown to adapt to escape binding of Sotrovimab in patients. Mechanisms that reduce
-the effectiveness of 
+shown to adapt to escape binding of Sotrovimab in patients. Mutations that reduce
+the effectiveness of antiviral treatments have also been observed.
 
 The Stanford Coronavirus Antiviral & Resistance database (CoV-RDB)[@RN2] has comprehensively 
 curated published data on the neutralising susceptibility of SARS-CoV-2 variants and
-spike mutations to mAbs. It also includes a sequence analysis program that when provided
-with a consensus sequence can annotate mutations. These mutations are then checked against
-the Cov-RDB to determine whether mutations may cause a decrease in Mabs susceptibility.
+spike mutations to mAbs. Recently, they have updated the database to include resistances to commonly used antivirals.
+It also includes a sequence analysis program that when provided with a consensus sequence can annotate mutations.
+These mutations are then checked against the Cov-RDB to determine whether mutations may cause a decrease in Mabs susceptibility.
+
+
 
 # Statement of Need
-Coronavirus Resistance Database (CoV-RDB) is an excellent tool for the analysis of resistance mutations.
-
-
-limits processing large amounts of data. Privacy concerns. Limited to monoclonal antibodies.
-
-
+Coronavirus Resistance Database (CoV-RDB) is an excellent tool for the analysis of resistance mutations. However, it's
+analysis pipeline is currently only available via web portal. This limits the number of sequences that can be processed 
+efficiently and it's ability to be incorporated into an automated monitoring platform such as Austrakka. There may also
+privacy concerns with uploading private sequencing information to a third-party website. QHERY removes these limitations
+by allowing the user to compare SARS-CoV-2 genomic information to the CoV-RDB locally.
 
 # Implementation
 
@@ -58,15 +59,22 @@ Qhery is a Python script available under a GPL license. It runs on macOS, GNU/Li
 and Microsoft Windows operating systems. Qhery can be used to assess SARS-CoV-2 for
 mutations that confer resistance to a wide variety of treatments. 
 
-Qhery takes either a variant call format (vcf) file, a FASTA file or a BAM file and converts them into amino acid changes.
-For BAM files, variant calling 
+Qhery can take a combination of variant call format (vcf) file, a FASTA file or a BAM file and converts them into amino acid changes.
+If a BAM file is provided QHERY identifies low frequency variants using lofreq which is then converted to Amino acid changes using bcftools csq.
+Provided VCF files are also converted to amino acid changes using bcftools csq. Finally, nextclade is used to determine amino acid changes from a FASTA file.
+Nextclade can also be used to determine the lineage of the query if not provided by the user. For a list of provided treatments, mutations that
+increase resistance to treatment are retrieved from the CoV-RDB database. This database can be automatically downloaded or
+provided to the software. Identified resistance mutations are then checked against the list of observed mutations for the query
+and reported in table. In addition, codon frequencies in the BAM file are examined and if a resistance mutation is present
+above a user defined threshold that mutation is also reported. This information is then compiled into a table that details
+whether a mutation is present in the sample, whether that muation is a lineage defining muatation, the codon usage at that site,
+determined from the BAM file. The fold change in resistance for each of the treatments specificied and whether that
+mutation falls in the epitope of the treatment.
 
 
 ![Flowchart of qhery](https://github.com/mjsull/qhery/blob/main/paper/flowchart.svg?raw=true)
 
-Legend goes here
 
-More text
 
 
 

@@ -111,7 +111,7 @@ class mutantFinder:
         with open(nextclade_tsv) as f:
             header = f.readline().rstrip().split("\t")
             for num, i in enumerate(header):
-                if i == "Nextclade_pango":
+                if i == "partiallyAliased":
                     pango_col = num
                 elif i == "aaSubstitutions":
                     sub_col = num
@@ -123,6 +123,8 @@ class mutantFinder:
                     miss_col = num
             data = f.readline().rstrip().split("\t")
         lineage = data[pango_col]
+        print(lineage)
+        print("##################")
         mut_list = []
         if lineage.startswith("BA."):
             if lineage == "BA.2.12.1" or lineage == "BA.1.1":
@@ -340,19 +342,3 @@ class mutantFinder:
         self.convert_vcf(vcf_in=self.lofreq_vcf, vcf_out=converted_vcf)
         self.run_bcf_csq(vcf_in=converted_vcf, csq_out=lofreq_csq)
         return self.parse_csq(csq_file=lofreq_csq)
-
-    def run_nucdiff(self, fasta):
-        reference_file = os.path.join(self.data_dir, "nCoV-2019.reference.fasta")
-        subprocess.Popen(
-            "nucdiff --vcf yes {} {} {} {}.nucdiff".format(fasta, reference_file, self.working_dir, self.sample_name),
-            shell=True,
-        ).wait()
-        return os.path.join(self.working_dir, "results", self.sample_name + ".nucdiff_query_snps.vcf")
-
-
-# subject_dict = get_lengths_order(args.proteins)
-# nocov = read_coverage_file(args.coverage)
-# lineage_variants = get_lineage_variants(args.lineage_variants)
-# run_blastx(args.query, args.proteins, args.output_prefix + ".blast")
-#
-# mutations, pos_dict = read_blast(args.output_prefix + '.blast', subject_dict, nocov)

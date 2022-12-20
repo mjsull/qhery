@@ -44,14 +44,14 @@ git clone https://github.com/mjsull/qhery.git
 
 - **Python >= 3.9.12**
 - **bcftools >= 1.10.2**
-- **curl >= 7.83.1**
-- **wget >= 1.20.3**
 
 ### Optional requirements:
 - **ncbi-blast+ >= 2.9.0+** - This will generate a BLASTx alignment of the genome for visualization
 - **lofreq >= 2.1.5** - if provided with a BAM file **qhery** will look for minor alleles in the alignment with lofreq
 - **samtools >= 1.7** - samtools is used to determine the depth of sequence along the genome, and which resistance mutations
 cannot be reported on due to lack of coverage.
+- **nextclade >= 2.8.0** - nextclade is used to automatically determine lineage and provide mutations if only a consensus fasta is provided.
+- **bammix >= 1.0.0** - bammix is used to visualise minority variants.
 
 ## Example usage: 
 
@@ -97,7 +97,7 @@ plot of the epitopes of the treatments the user listed (if available).
 | N:ERS31-33∆ | -           | True      | True       | False    | False               | 0                                 | -                          | False                 | 0                                 | -                          | False                 |
 | ORF3a:L52F  | -           | True      | False      | True     | False               | 0                                 | -                          | False                 | 0                                 | -                          | False                 |
 | RdRP:802D   | -           | False     | False      | True     | True                | 2.54                              | =2.54                      | False                 | 0                                 | -                          | False                 |
-|S:R214ins    | S:R214R_EPE | True      | True       | True     | True                | 0                                 | -                          | False                 | 3.00                              | =3.0                       | False                 |
+| S:R214ins   | S:R214R_EPE | True      | True       | True     | True                | 0                                 | -                          | False                 | 3.00                              | =3.0                       | False                 |
 | S:P337T     | -           | True      | False      | True     | True                | 0                                 | -                          | False                 | 8.00                              | =5.4,=10.6                 | True                  |
 
 ### Columns
@@ -181,46 +181,6 @@ List of treatments to interrogate.
 ``--fasta``, ``--fasta`` <sample.fasta>
 
 Fasta file of the consensus sequence of the sample, only used to generate a BLASTx alignment for double checking mutations.
-
-<hr style="border:1px solid gray">
-
-### mutations
-___
-
-#### arguments
-
-Only list mutations and not resistance information.
-
-``-n``, ``--sample_name`` <sample_name>
-
-Sample name, output files will be prefixed with this.
-
-``-v``, ``--vcf`` <sample.vcf>
-
-vcf file, variants called against the Wuhan-Hu-1 reference (MN908947.3)
-
-``-b``, ``--bam`` <sample.sorted.bam>
-
-Sorted bam file. File of read alignments for the sample mapped against the Wuhan-Hu-1 reference (MN908947.3)
-
-``-d``, ``--database_dir`` <path/to/database_dir>
-
-Directory with the latest version of the Stanford [resistance database](https://github.com/hivdb/covid-drdb-payload/releases/latest).
-If the latest version is not in this folder it will be downloaded to this location.
-
-``-p``, ``--pipeline_dir`` <path/to/pipeline_dir>
-
-All script output and intermediated files will be put here. Script will create a directory if none exists.
-
-``-l``, ``--lineage`` <BA.1>
-
-Lineage of the query (BA.1/BA.2/BA.3/Delta etc.)
-
-
-``-k``, ``--keep_lineage``
-
-report lineage defining mutations as well
-
 
 <hr style="border:1px solid gray">
 

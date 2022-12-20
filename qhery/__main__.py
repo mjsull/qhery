@@ -16,6 +16,7 @@ except ModuleNotFoundError:
 
 def main(args=None):
     parser = argparse.ArgumentParser(prog="qhery")
+
     subparsers = parser.add_subparsers(dest="subparser_name")
 
     list_parser = subparsers.add_parser(
@@ -30,8 +31,18 @@ def main(args=None):
     list_parser.add_argument(
         "--download",
         help="Download the latest database.",
-        action="store_true",
-        default=False,
+        action="store_true"
+    )
+    list_parser.add_argument(
+        "--details",
+        help="List rx type and synonyms.",
+        action="store_true"
+    )
+    list_parser.add_argument(
+        "--include_unapproved",
+        "-a",
+        help="List rx that have not been give EUA.",
+        action="store_false"
     )
     run_parser = subparsers.add_parser("run", help="Run CoViD resistance identifier.")
     run_parser.add_argument("--sample_name", "-n", required=True, help="Sample name.")
@@ -51,75 +62,23 @@ def main(args=None):
     )
     run_parser.add_argument("--pipeline_dir", "-p", required=True, help="Pipeline to run program in.")
     run_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-    run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze.")
+    run_parser.add_argument("--rx_list", "-rx", nargs="+", help="List of drugs to analyze, if empty will run on all approved drugs.")
     run_parser.add_argument("--fasta", "-f", help="Consensus fasta.")
     run_parser.add_argument("--download_nextclade_data", "-dn", action="store_true", help="download nextclade data.")
     run_parser.add_argument("--nextclade_data", "-nd", help="directory of sars-cov-2 nextclade data, "
                             "can be downloaded with "
                             "\"nextclade dataset get --name 'sars-cov-2' --output-dir 'data/sars-cov-2'\"")
 
-    mut_parser = subparsers.add_parser("mutations", help="List mutations without resistance information.")
-    mut_parser.add_argument("--vcf", "-v", help="List of VCF files")
-    mut_parser.add_argument(
-        "--database_dir",
-        "-d",
-        help="Directory with latest Stanford resistance database.",
-    )
-    mut_parser.add_argument("--pipeline_dir", "-p", help="Pipeline to run program in.")
-    mut_parser.add_argument("--lineage", "-l", help="Lineage report of variants.")
-    mut_parser.add_argument("--sample_name", "-n", help="Sample name.")
-    mut_parser.add_argument("--bam", "-b", help="bam file")
 
     args = parser.parse_args()
-
-    if args.subparser_name == "list_rx":
-        gt = get_tables_sql.covid_drdb([], args.database_dir)
-        if args.download:
-            gt.download_latest()
-        else:
-            gt.get_database()
-        gt.connect()
-        sys.stdout.write("The following MABs have escape information.")
-        gt.list_rx()
-
-    elif args.subparser_name == "mutations":
-        gt = get_tables_sql.covid_drdb([], args.database_dir)
+    gt = get_tables_sql.covid_drdb(args.database_dir)
+    if args.download:
+        gt.download_latest()
+    else:
         gt.get_database()
-        gt.connect()
-        if not args.lineage is None:
-            mut_list_var = gt.get_variant_mutations(args.lineage)
-        else:
-            mut_list_var = []
-        mf = get_mutants.mutantFinder(args.pipeline_dir, args.sample_name)
-        mf.convert_vcf(args.vcf)
-        mf.run_bcf_csq()
-        mut_list_sample = mf.parse_csq()
-        if not args.bam is None:
-            if not os.path.exists(args.bam + '.bai'):
-                sys.stderr.write("Please sort and index your bam file before running ")
-                sys.exit(1)
-            mut_list_lofreq = mf.recover_low_freq(args.bam)
-        else:
-            mut_list_lofreq = []
-        all_muts = list(set(mut_list_sample + mut_list_lofreq))
-        all_muts.sort(
-            key=lambda x: (
-                x.split(":")[0].split("-")[0],
-                int("".join([n for n in x if n.isdigit()])),
-            )
-        )
-        with open(
-            os.path.join(args.pipeline_dir, "{}.mutations.txt".format(args.sample_name)),
-            "w",
-        ) as o:
-            for i in all_muts:
-                if "_" in i:
-                    mut = i.split("_")[0][:-1] + "ins"
-                else:
-                    mut = i
-                if not mut in mut_list_var:
-                    o.write("{}\n".format(i))
-
+    gt.connect()
+    if args.subparser_name == "list_rx":
+        gt.list_rx(args.include_unapproved, args.details)
     elif args.subparser_name == "run":
         if os.path.exists(args.pipeline_dir) and os.path.isdir(args.pipeline_dir):
             pass
@@ -128,25 +87,26 @@ def main(args=None):
             sys.exit(1)
         else:
             os.makedirs(args.pipeline_dir)
+        print(args)
         if args.rx_list is None:
-            args.rx_list = [
-                "Sotrovimab",
-                "Paxlovid",
-                "Remdesivir",
-                "Mulnupirivir",
-                "Evusheld",
-            ]
-        gt = get_tables_sql.covid_drdb(args.rx_list, args.database_dir)
-        if args.download:
-            gt.download_latest()
+            rx_list = gt.get_rx(True)
         else:
-            gt.get_database()
+            temp_rx_list = gt.get_rx(False)
+            rx_list = []
+            for i in temp_rx_list:
+                add_it = False
+                for j in args.rx_list:
+                    if i.name.lower() == j.lower() or j.lower() in i.synonyms_lower():
+                        add_it = True
+                        break
+                if add_it:
+                    rx_list.append(i)
+        gt.drug_list = rx_list
         gt.connect()
+        gt.get_ref()
         gt.get_epitopes()
-        # if not args.bam is None:
-        #     make_output.make_epitope_graphs(args.bam, gt.epitopes, args.pipeline_dir, args.sample_name)
-        gt.get_synonyms()
         gt.get_single_mutations()
+        print('dong')
         gt.get_fold_resistance()
         gt.add_local_resitances()
         mut_list_var = gt.get_variant_mutations(args.lineage)
@@ -189,15 +149,14 @@ def main(args=None):
             mut_list_sample,
             gt.resistances,
             mut_list_var,
-            gt.epitopes,
+            gt.epitope_dict(),
             args.pipeline_dir,
             args.sample_name,
             args.bam,
             aa_to_nuc_dict,
             fasta_coverage
         )
-        if not args.fasta is None:
-            make_output.make_alignment_files(args.fasta, args.pipeline_dir, args.sample_name)
+
 
 
 main("command_line")
