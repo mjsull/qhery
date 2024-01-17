@@ -26,6 +26,7 @@ def main(args=None):
     list_parser.add_argument(
         "--database_dir",
         "-d",
+        required=True,
         help="Directory with latest Stanford resistance database.",
     )
     list_parser.add_argument(
@@ -106,7 +107,6 @@ def main(args=None):
         gt.get_ref()
         gt.get_epitopes()
         gt.get_single_mutations()
-        print('dong')
         gt.get_fold_resistance()
         gt.add_local_resitances()
         mut_list_var = gt.get_variant_mutations(args.lineage)
@@ -150,6 +150,8 @@ def main(args=None):
             gt.resistances,
             mut_list_var,
             gt.epitope_dict(),
+            gt.invitro,
+            gt.invivo,
             args.pipeline_dir,
             args.sample_name,
             args.bam,

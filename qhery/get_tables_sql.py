@@ -61,9 +61,12 @@ class covid_drdb:
     def get_epitopes(self):
         for i in self.drug_list:
             i.epitopes = []
-            for row in self.con.execute('SELECT position FROM antibody_epitopes WHERE ab_name = "{}"'.format(i.name)):
-                i.epitopes.append(row[0])
-
+            if i.rx_type == "Antibody":
+                for row in self.con.execute('SELECT position FROM antibody_epitopes WHERE ab_name = "{}"'.format(i.name)):
+                    i.epitopes.append(row[0])
+            elif i.rx_type == "Antiviral":
+                for row in self.con.execute('SELECT position FROM compound_binding_pockets WHERE drug_name = "{}"'.format(i.name)):
+                    i.epitopes.append(row[0])
 
     def epitope_dict(self):
         epitope_dict = {}
@@ -75,34 +78,24 @@ class covid_drdb:
     def get_fold_resistance(self):
         self.resistances = {}
         for i in self.drug_list:
-            print(i.name)
             self.resistances[i.name] = {}
-            for j in i.synonyms:
-                for row in self.con.execute(
-                    'SELECT iso_name, fold_cmp, fold FROM rx_fold WHERE rx_name = "{}"'.format(j)
-                ):
-                    if row[0] in self.iso_dict:
-                        if ":" in self.iso_dict[row[0]]:
-                            mutation_name = self.iso_dict[row[0]]
-                        else:
-                            mutation_name = "S:" + self.iso_dict[row[0]]
-                        if mutation_name in self.resistances[i.name]:
-                            self.resistances[i.name][mutation_name].append([row[1], row[2]])
-                        else:
-                            self.resistances[i.name][mutation_name] = [[row[1], row[2]]]
-                print('SELECT gene, position, amino_acid, col_value FROM resistance_mutation_attributes WHERE col_name = "FOLD:{}"'.format(j))
-                for row in self.con.execute(
-                    'SELECT gene, position, amino_acid, col_value FROM resistance_mutation_attributes WHERE col_name = "FOLD:{}"'.format(j)):
-                    gene, position, mut_aa, col_value = row
-                    mutation_name = gene + ":" + self.ref_aa[gene][position] + str(position) + mut_aa
-                    if mutation_name in self.resistances[i.name]:
-                        print('dang', mutation_name, j, col_value)
-                        print(self.resistances[i.name][mutation_name])
-                        self.resistances[i.name][mutation_name] = [['=', float(col_value)]]
-                    else:
-                        print('dong', mutation_name, j)
-                        print(list(self.resistances[i.name]))
-                        self.resistances[i.name][mutation_name] = [['=', float(col_value)]]
+            for row in self.con.execute(
+                'SELECT gene, position, amino_acid, col_value FROM resistance_mutation_attributes WHERE col_name = "FOLD:{}"'.format(i)):
+                gene, position, mut_aa, col_value = row
+                mutation_name = gene + ":" + self.ref_aa[gene][position] + str(position) + mut_aa
+                self.resistances[i.name][mutation_name] = float(col_value)
+        self.invivo = {}
+        for row in self.con.execute(
+            'SELECT gene, position, amino_acid, col_value FROM resistance_mutation_attributes WHERE col_name = "INVIVO"'):
+            gene, position, mut_aa, col_value = row
+            mutation_name = gene + ":" + self.ref_aa[gene][position] + str(position) + mut_aa
+            self.invivo[mutation_name] = col_value
+        self.invitro = {}
+        for row in self.con.execute(
+            'SELECT gene, position, amino_acid, col_value FROM resistance_mutation_attributes WHERE col_name = "INVITRO"'):
+            gene, position, mut_aa, col_value = row
+            mutation_name = gene + ":" + self.ref_aa[gene][position] + str(position) + mut_aa
+            self.invitro[mutation_name] = col_value
 
     def add_local_resitances(self):
         dirname = os.path.dirname(__file__)
@@ -114,19 +107,13 @@ class covid_drdb:
                 if not rx in self.resistances:
                     continue
                 if not mut_name in self.resistances[rx]:
-                    self.resistances[rx][mut_name] = [[symbol, float(fold_change)]]
+                    self.resistances[rx][mut_name] = float(fold_change)
 
     def list_resistances(self):
         out_list = []
         for i in self.resistances:
             for j in self.resistances[i]:
-                max_resist = 0
-                fold_change = ""
-                for k in self.resistances[i][j]:
-                    if j[1] > max_resist:
-                        max_resist = j[1]
-                    fold_change += "," + j[0] + str(j[1])
-                out_list.append([i, j, max_resist, fold_change[1:]])
+                out_list.append([i, j, self.resistances[i][j]])
         return out_list
 
     def get_variant_mutations(self, variant):
@@ -183,7 +170,7 @@ class covid_drdb:
     def get_rx(self, eua_only=True):
         rx_list = []
 
-        # get antibiotic names from antibodies table, add abbreviation to synonyms
+        # get antibody names from antibodies table, add abbreviation to synonyms
         for row in self.con.execute("SELECT ab_name, abbreviation_name, availability FROM antibodies"):
             if not eua_only or row[2] == 'EUA':
                 curr_rx = rx(row[0], "covdb", "Antibody")
@@ -196,37 +183,29 @@ class covid_drdb:
             for row in self.con.execute('SELECT synonym FROM antibody_synonyms WHERE ab_name = "{}"'.format(i.name)):
                 i.synonyms.add(row[0])
         # find RX associated with 2 or more antibodies
-        combos = {}
-        antibody_names = set([x.name for x in rx_list])
-
-        rx_names_used = set()
-        for row in self.con.execute("SELECT rx_name FROM rx_fold"):
-            rx_names_used.add(row[0])
-        for row in self.con.execute("SELECT rx_name, ab_name FROM rx_antibodies"):
-            if not row[0] in combos:
-                combos[row[0]] = set()
-            if row[1] in antibody_names:
-                combos[row[0]].add(row[1])
-        for i in rx_names_used:
-            if i in combos and len(combos[i]) > 1 and combos[i].issubset(antibody_names):
-                curr_rx = rx(i, "covdb", "Combination antibody")
-                for j in combos:
-                    if combos[j] == combos[i]:
-                        curr_rx.synonyms.add(j)
-                gotten = False
-                for j in rx_list:
-                    if i in j.synonyms:
-                        gotten = True
-                        break
-                if not gotten:
-                    if "Evusheld" in curr_rx.synonyms:
-                        curr_rx.name = "Evusheld"
-                    rx_list.append(curr_rx)
-
+        combo_dict = {}
+        for row in self.con.execute("SELECT rx_name, ab_name, availability FROM dms_combo_mab_view"):
+            if not eua_only or row[2] == 'EUA':
+                if not row[1] in combo_dict:
+                    combo_dict[row[1]] = set()
+                combo_dict[row[1]].add(row[0])
+        for i in combo_dict:
+            curr_rx = rx(i, "covdb", "Combination antibody")
+            rx_list.append(curr_rx)
+        antiviral_list = []
+        for row in self.con.execute("SELECT drug_name, abbreviation_name FROM compounds"):
+            curr_rx = rx(row[0], "covdb", "Antiviral")
+            antiviral_list.append(row[0])
+            if row[1] != "" and not row[1] is None:
+                curr_rx.synonyms.add(row[1])
+            rx_list.append(curr_rx)
+        for i in rx_list:
+            if i.rx_type == "Antiviral":
+                for row in self.con.execute('SELECT synonym FROM compound_synonyms WHERE drug_name = "{}"'.format(i.name)):
+                    i.synonyms.add(row[0])
         dirname = os.path.dirname(__file__)
         data_dir = os.path.join(dirname, "data")
-
-        gotten = set()
+        gotten = set([x.name for x in rx_list])
         with open(os.path.join(data_dir, "resistance_table.tsv")) as f:
             for line in f:
                 the_rx, gene, refaa, pos, mutaa, symbol, fold_change = line.split("\t")
@@ -234,7 +213,6 @@ class covid_drdb:
                     gotten.add(the_rx)
                     curr_rx = rx(the_rx, "internal", "Antiviral")
                     rx_list.append(curr_rx)
-
         rx_list.sort(key= lambda x: (x.rx_type, x.name))
         return(rx_list)
 

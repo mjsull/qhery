@@ -22,6 +22,8 @@ def make_final_tables(
     resistance_muts,
     variant_muts,
     epitopes,
+    in_vitro,
+    in_vivo,
     pipeline_folder,
     sample_name,
     bam_file,
@@ -42,13 +44,15 @@ def make_final_tables(
             "codon_present",
             "codons",
             "codon_depth",
+            "in_vitro",
+            "in_vivo"
         ]
         min_depth = 20
         drug_list = list(resistance_muts)
         drug_list.sort()
         for i in drug_list:
-            headers.append("{}_average_fold_reduction".format(i))
-            headers.append("{}_fold_reductions".format(i))
+            print(i)
+            headers.append("{}_fold_reduction".format(i))
             headers.append("{}_in_epitope".format(i))
         full_table.write("\t".join(headers) + "\n")
         final_table.write("\t".join(headers) + "\n")
@@ -130,26 +134,17 @@ def make_final_tables(
             above_min_fold_reduction = "False"
             for j in drug_list:
                 if i in resistance_muts[j]:
-                    tot_res = 0
-                    col = ""
-                    for k in resistance_muts[j][i]:
-                        tot_res += k[1]
-                        col += "," + k[0] + str(k[1])
-                    col = col[1:]
-                    rx_columns += [
-                        "{:.2f}".format(tot_res / len(resistance_muts[j][i])),
-                        col,
-                    ]
-                    if tot_res / len(resistance_muts[j][i]) >= min_fold_reduction_to_report:
+                    fold_resistance = resistance_muts[j][i]
+                    if fold_resistance >= min_fold_reduction_to_report:
                         above_min_fold_reduction = "True"
+                    rx_columns.append(str(fold_resistance))
                 else:
-                    rx_columns += ["0", "-"]
+                    rx_columns.append("0")
                 in_epitope = "False"
-                if gene == "S":
-                    for num in range(start, stop + 1):
-                        if num in epitopes[j]:
-                            in_epitope = "True"
-                            break
+                for num in range(start, stop + 1):
+                    if num in epitopes[j]:
+                        in_epitope = "True"
+                        break
                 rx_columns.append(in_epitope)
             columns.append(above_min_fold_reduction)
             if codon_depth == "NA" or codon_depth == "in_consensus" or codon_depth == "not_in_consensus":
@@ -161,6 +156,14 @@ def make_final_tables(
             if codon_usage == "":
                 codon_usage = "NA"
             columns += [codon_present, codon_usage, str(codon_depth)]
+            if i in in_vitro:
+                columns.append(str(in_vitro[i]))
+            else:
+                columns.append("0")
+            if i in in_vivo:
+                columns.append(str(in_vivo[i]))
+            else:
+                columns.append("0")
             columns += rx_columns
             outline = "\t".join(columns) + "\n"
             full_table.write(outline)

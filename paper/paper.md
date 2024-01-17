@@ -12,6 +12,8 @@ authors:
     affiliation: 1
   - name: Alyssa Pyke
     affiliation: 1
+  - name: Wytamma Wirth
+    affiliation: 2
   - name: Amy Jennison
     affiliation: 1
   - name: Sanmarie Schlebusch
@@ -19,62 +21,70 @@ authors:
 affiliations:
   - name: Q-PHIRE genomics, Forensic and Scientific Services, Queensland Health
     index: 1
-date: 06 June 2022
+  - name: Peter Doherty Institute for Infection and Immunity, University of Melbourne, Melbourne, VIC, Australia
+    index: 2
+date: 17 January 2024
 bibliography: paper.bib
 
 ---
 
-# Summary
-Qhery is a Python application for the detection of mutations in SARS-CoV-2 that
-may confer resistance to treatment. Qhery is freely available under a GPL license
-for macOS, GNU/Linux and Windows from https://github.com/mjsull/qhery/
+# 
 
 
-# Introduction 
+
+# Summary 
 
 Antivirals and neutralising monoclonal antibodies (mAbs) are now extensively
 used for the prevention and treatment of COVID-19. Unfortunately, the virus
 SARS-CoV-2 is able to rapidly adapt to escape treatment[@RN1]. SARS-CoV-2 has been
-shown to adapt to escape binding of Sotrovimab in patients. Mutations that reduce
-the effectiveness of antiviral treatments have also been observed.
+shown to adapt to escape binding of Sotrovimab in patients[@RN2]. Mutations that reduce
+the effectiveness of antiviral treatments have also been observed[@RN3].
 
-The Stanford Coronavirus Antiviral & Resistance database (CoV-RDB)[@RN2] has comprehensively 
+Two tools exist for the analysis of resistance mutations in SARS-CoV-2. 
+The Stanford Coronavirus Antiviral & Resistance database (CoV-RDB)[@RN4] has comprehensively 
 curated published data on the neutralising susceptibility of SARS-CoV-2 variants and
-spike mutations to mAbs. Recently, they have updated the database to include resistances to commonly used antivirals.
-It also includes a sequence analysis program that when provided with a consensus sequence can annotate mutations.
-These mutations are then checked against the Cov-RDB to determine whether mutations may cause a decrease in Mabs susceptibility.
+spike mutations to mAbs. It also includes mutations that grant resistance to commonly used antivirals.
+Included on the website is a sequence analysis program that when provided with a consensus sequence or raw reads can 
+annotate mutations. These mutations are then checked against the Cov-RDB to determine whether mutations may cause a 
+decrease in mAbs susceptibility. Sabres is a command-line tool that compares variants found in a VCF file to an internally
+maintained database of resistance mutations [@RN5].
 
-
+Qhery is a Python application for the detection of mutations in SARS-CoV-2 that
+may confer resistance to treatment. Qhery is freely available under a GPL license
+for macOS and GNU/Linux from https://github.com/mjsull/qhery/
 
 # Statement of Need
 Coronavirus Resistance Database (CoV-RDB) is an excellent tool for the analysis of resistance mutations. However, it's
 analysis pipeline is currently only available via web portal. This limits the number of sequences that can be processed 
-efficiently and it's ability to be incorporated into an automated monitoring platform such as Austrakka. There may also
-privacy concerns with uploading private sequencing information to a third-party website. QHERY removes these limitations
-by allowing the user to compare SARS-CoV-2 genomic information to the CoV-RDB locally.
+efficiently, and it's ability to be incorporated into an automated monitoring platform such as Austrakka[@RN6]. There may also
+privacy concerns with uploading private sequencing information to a third-party website. SABRES is also a useful tool, however
+it's internal database is updated infrequently. It is also unable to detect low frequency variants natively. Qhery removes
+these limitations by allowing the user to compare SARS-CoV-2 genomic information to the frequently updated CoV-RDB locally.
 
 # Implementation
 
+Qhery can take a combination of variant call format (vcf) file, a FASTA file of the consensus sequence or a BAM file of 
+raw reads aligned to the SARS-CoV-2 reference (MN908947.3) and converts them into amino acid changes. If a BAM file is 
+provided QHERY identifies low frequency variants using lofreq[@RN7] which is then converted to Amino acid changes using 
+bcftools csq[@RN8]. Provided VCF files are also converted to amino acid changes using bcftools csq. Finally, nextclade is used
+to determine amino acid changes from a FASTA file. Nextclade can also be used to determine the lineage of the query if 
+not provided by the user. For a list of provided treatments, mutations that increase resistance to treatment are retrieved
+from the CoV-RDB database. This database can be automatically downloaded or provided to the software. Identified resistance 
+mutations are then checked against the list of observed mutations for the query and reported in table. In addition, codon 
+frequencies in the BAM file are examined using pysam[@RN8] and if a resistance mutation is present above a user defined 
+threshold that mutation is also reported. This information is compiled into a table that details whether a mutation 
+is present in the sample, the codon frequency at that site, and whether that mutation is a lineage defining mutation.
+The fold change in resistance for each of the treatments specified and whether that mutation falls in the epitope or 
+binding pocket of the treatment is also included.
+
+# Availability
 Qhery is a Python script available under a GPL license. It runs on macOS, GNU/Linux
 and Microsoft Windows operating systems. Qhery can be used to assess SARS-CoV-2 for
 mutations that confer resistance to a wide variety of treatments. 
 
-Qhery can take a combination of variant call format (vcf) file, a FASTA file or a BAM file and converts them into amino acid changes.
-If a BAM file is provided QHERY identifies low frequency variants using lofreq which is then converted to Amino acid changes using bcftools csq.
-Provided VCF files are also converted to amino acid changes using bcftools csq. Finally, nextclade is used to determine amino acid changes from a FASTA file.
-Nextclade can also be used to determine the lineage of the query if not provided by the user. For a list of provided treatments, mutations that
-increase resistance to treatment are retrieved from the CoV-RDB database. This database can be automatically downloaded or
-provided to the software. Identified resistance mutations are then checked against the list of observed mutations for the query
-and reported in table. In addition, codon frequencies in the BAM file are examined and if a resistance mutation is present
-above a user defined threshold that mutation is also reported. This information is then compiled into a table that details
-whether a mutation is present in the sample, whether that muation is a lineage defining muatation, the codon usage at that site,
-determined from the BAM file. The fold change in resistance for each of the treatments specificied and whether that
-mutation falls in the epitope of the treatment.
-
-
 ![Flowchart of qhery](https://github.com/mjsull/qhery/blob/main/paper/flowchart.svg?raw=true)
 
-
+## Figure 1: Flowchart of Qhery
 
 
 

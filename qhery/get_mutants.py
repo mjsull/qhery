@@ -205,7 +205,7 @@ class mutantFinder:
                 for j in mut_list:
                     if '_' in j:
                         continue
-                    sub_pos = int("0" + "".join([n for n in j if n.isdigit()]))
+                    sub_pos = int("0" + "".join([n for n in j.split(':')[1] if n.isdigit()]))
                     sub_gene = j.split(':')[0]
                     if sub_pos == del_end +1 and sub_gene == del_gene:
                         sub_to_fix = j
